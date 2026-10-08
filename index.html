@@ -1,0 +1,1216 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>シフトボード</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a one-screen desk tool. The board is a ruled sheet like a printed 勤務表; the store name and section titles are set in mincho,
+   controls in gothic, every number in mono. Squared corners, thin rules, 藍 for actions and 朱 only for things that need attention. */
+:root{
+  --bg:#e8eae6; --paper:#fbfbf9; --paper2:#f1f2ee; --paper3:#e7e9e5;
+  --ink:#1b1f22; --ink2:#434b4f; --muted:#6d7579;
+  --rule:#c6ccc8; --rule2:#dde1dd;
+  --ai:#24456e; --ai-fg:#ffffff; --ai-soft:#e3eaf3;
+  --shu:#b4402a; --shu-soft:#f5e2dd;
+  --ok:#2d6a48; --ok-soft:#dfebe2; --warn:#8a6210; --warn-soft:#f2e9cf;
+  --today:#f6efd6; --sat:#2b5a9c; --sun:#b4402a; --off:#8a9195;
+  --display:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho","MS Mincho",serif;
+  --font:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
+  --mono:"IBM Plex Mono","Consolas","Menlo",monospace;
+  --r:3px; --shadow:0 12px 36px rgba(20,26,30,.22);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#141719; --paper:#1d2124; --paper2:#242a2d; --paper3:#2c3336;
+  --ink:#e5e7e3; --ink2:#bcc2be; --muted:#8e979a;
+  --rule:#3a4246; --rule2:#2c3336;
+  --ai:#86abdc; --ai-fg:#0c1a2b; --ai-soft:#20303f;
+  --shu:#e2735c; --shu-soft:#3c2420;
+  --ok:#6fbf90; --ok-soft:#1a3327; --warn:#d8a84a; --warn-soft:#3a2f14;
+  --today:#2d2a1b; --sat:#88b0e4; --sun:#e2735c; --off:#79828a;
+  --shadow:0 12px 36px rgba(0,0,0,.6); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#141719; --paper:#1d2124; --paper2:#242a2d; --paper3:#2c3336;
+  --ink:#e5e7e3; --ink2:#bcc2be; --muted:#8e979a;
+  --rule:#3a4246; --rule2:#2c3336;
+  --ai:#86abdc; --ai-fg:#0c1a2b; --ai-soft:#20303f;
+  --shu:#e2735c; --shu-soft:#3c2420;
+  --ok:#6fbf90; --ok-soft:#1a3327; --warn:#d8a84a; --warn-soft:#3a2f14;
+  --today:#2d2a1b; --sat:#88b0e4; --sun:#e2735c; --off:#79828a;
+  --shadow:0 12px 36px rgba(0,0,0,.6); color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.5;display:flex;flex-direction:column;min-height:0}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--ai);outline-offset:2px}
+h1,h2,h3{margin:0;text-wrap:balance}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.r{text-align:right}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:1px solid var(--rule);display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;padding:0 16px}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0;padding:10px 0}
+.brand h1{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40vw;line-height:1.2}
+.tag{font-size:11px;letter-spacing:.06em;padding:1px 6px;border:1px solid var(--rule);color:var(--muted);white-space:nowrap;border-radius:2px}
+.tag.on{color:var(--ok);border-color:var(--ok)}
+.tag.ro{color:var(--warn);border-color:var(--warn)}
+.tabs{display:flex;gap:0;align-self:stretch;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{border:0;background:transparent;padding:14px 11px 12px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ai)}
+.tabs .cnt{font-family:var(--mono);font-size:11px;background:var(--shu);color:#fff;padding:0 5px;border-radius:2px;line-height:1.5}
+.period{display:flex;align-items:center;gap:6px;margin-left:auto;padding:8px 0}
+.period .lbl{font-weight:700;font-size:15px;min-width:11em;text-align:center;font-variant-numeric:tabular-nums}
+.btn{border:1px solid var(--rule);background:var(--paper);border-radius:var(--r);padding:6px 11px;font-weight:500;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;color:var(--ink);line-height:1.3}
+.btn:hover{background:var(--paper2)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--ai);color:var(--ai-fg);border-color:var(--ai)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--shu)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn.icon{padding:6px 8px}
+.btn.ghost{border-color:transparent;background:transparent}
+.actions{display:flex;gap:6px;flex-wrap:wrap;padding:8px 0}
+
+main{flex:1;min-height:0;overflow:auto;padding:14px 16px 28px}
+.view{display:flex;flex-direction:column;gap:14px;max-width:1500px;margin:0 auto}
+.notice{border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);padding:8px 12px;font-size:13px;border-radius:var(--r)}
+.notice.shu{border-color:var(--shu);background:var(--shu-soft)}
+.notice.ai{border-color:var(--ai);background:var(--ai-soft)}
+
+/* board tables */
+.sheet-wrap{overflow:auto;border:1px solid var(--rule);background:var(--paper);max-height:calc(100% - 4px)}
+table.board{border-collapse:separate;border-spacing:0;width:100%;min-width:900px}
+table.board th,table.board td{border-bottom:1px solid var(--rule2);border-right:1px solid var(--rule2);padding:0;vertical-align:top;text-align:left}
+table.board thead th{position:sticky;top:0;background:var(--paper);z-index:3;border-bottom:1px solid var(--rule)}
+table.board th.who,table.board th.corner{position:sticky;left:0;background:var(--paper);z-index:2;min-width:150px;width:150px;border-right:1px solid var(--rule)}
+table.board thead th.corner{z-index:4}
+table.board th.day{padding:8px 10px;min-width:118px}
+.day .dnum{font-family:var(--display);font-size:20px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.day .dwd{font-size:12px;color:var(--muted)}
+.day.sat .dnum,.day.sat .dwd{color:var(--sat)}
+.day.sun .dnum,.day.sun .dwd,.day.hol .dnum,.day.hol .dwd{color:var(--sun)}
+.day .hol{font-size:11px;color:var(--sun)}
+.day.today .dnum{text-decoration:underline;text-decoration-color:var(--ai);text-decoration-thickness:3px;text-underline-offset:4px}
+td.today-col{background:var(--today)}
+td.wk{background:var(--paper2)}
+tr.need th,tr.need td{background:var(--paper2);font-size:12px;padding:5px 8px}
+tr.need th{font-weight:500;color:var(--muted)}
+.needchip{display:inline-flex;align-items:center;gap:4px;margin:1px 4px 1px 0;padding:0 5px;border-radius:2px;border:1px solid var(--rule);font-variant-numeric:tabular-nums;background:var(--paper);font-family:var(--mono);font-size:11px}
+.needchip i{width:8px;height:8px;border-radius:1px;background:var(--c)}
+.needchip.bad{border-color:var(--shu);color:var(--shu);background:var(--shu-soft)}
+.needchip.ok{color:var(--ok)}
+.needchip.dim{opacity:.5}
+th.who{padding:8px 10px;font-weight:500}
+th.who .nm{display:flex;align-items:center;gap:7px}
+th.who .dot{width:9px;height:9px;border-radius:1px;background:var(--c);flex:none}
+th.who small{display:block;color:var(--muted);font-size:11px;margin-left:16px}
+td.cell{min-height:54px;height:54px;padding:4px;cursor:cell;transition:background .12s}
+td.cell:hover{background:var(--ai-soft)}
+td.cell.dragover{outline:2px dashed var(--ai);outline-offset:-3px}
+td.cell.unavail{background-image:repeating-linear-gradient(135deg,transparent 0 6px,var(--rule2) 6px 7px)}
+td.sum{padding:8px 10px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-family:var(--mono)}
+td.sum small{color:var(--muted)}
+td.sum.over{color:var(--shu);font-weight:700}
+tr.total th,tr.total td{background:var(--paper2);font-size:12px;padding:6px 10px;color:var(--muted)}
+tr.total td b{color:var(--ink);font-size:13px;font-family:var(--mono)}
+.chip{display:flex;align-items:center;gap:5px;background:var(--c);color:#fff;border-radius:2px;padding:3px 7px;font-size:12px;font-weight:500;line-height:1.3;cursor:grab;margin-bottom:3px;position:relative;user-select:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.chip .t{font-family:var(--mono);font-size:11px;opacity:.92;white-space:nowrap}
+.chip.off{background:transparent;color:var(--muted);border:1.5px dashed var(--off);cursor:grab;box-shadow:none}
+.chip.custom{--c:#5b6b7c}
+.chip.req{background:transparent;color:var(--ai);border:1.5px dotted var(--ai);box-shadow:none;cursor:pointer}
+.chip .w{margin-left:auto;background:var(--warn);color:#1a1200;border-radius:2px;font-size:10px;font-weight:700;width:16px;height:16px;display:grid;place-items:center;flex:none}
+.chip:active{cursor:grabbing}
+
+/* month */
+.month{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);overflow:hidden}
+.month .mh{background:var(--paper2);padding:6px;text-align:center;font-size:12px;color:var(--muted);font-weight:500}
+.month .mh.sat{color:var(--sat)}.month .mh.sun{color:var(--sun)}
+.mday{background:var(--paper);min-height:110px;padding:6px;display:flex;flex-direction:column;gap:3px;cursor:pointer;min-width:0}
+.mday:hover{background:var(--ai-soft)}
+.mday.out{opacity:.45}
+.mday.today{background:var(--today)}
+.mday.wk{background:var(--paper2)}
+.mday .dh{display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums}
+.mday .dh b{font-family:var(--display);font-size:16px}
+.mday.sat .dh b{color:var(--sat)}.mday.sun .dh b,.mday.hol .dh b{color:var(--sun)}
+.mday .dh small{font-size:10px;color:var(--sun);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mday .cnt{margin-left:auto;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.mday .cnt.bad{color:var(--shu);font-weight:700}
+.mchip{font-size:11px;padding:1px 5px;border-left:3px solid var(--c);background:var(--paper2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mchip.off{border-left-style:dashed;color:var(--muted)}
+.mchip .t{color:var(--muted);font-family:var(--mono);font-size:10px}
+.mmore{font-size:11px;color:var(--muted)}
+
+/* day timeline */
+.tl{border:1px solid var(--rule);background:var(--paper);overflow:auto}
+.tl-grid{min-width:800px}
+.tl-row{display:grid;grid-template-columns:160px 1fr;border-bottom:1px solid var(--rule2)}
+.tl-row.head{position:sticky;top:0;background:var(--paper);z-index:2;border-bottom:1px solid var(--rule)}
+.tl-who{padding:8px 10px;border-right:1px solid var(--rule);display:flex;align-items:center;gap:7px;font-weight:500}
+.tl-who .dot{width:9px;height:9px;border-radius:1px;background:var(--c)}
+.tl-track{position:relative;height:46px;background-image:repeating-linear-gradient(90deg,var(--rule2) 0 1px,transparent 1px calc(100%/var(--n)));cursor:cell}
+.tl-track:hover{background-color:var(--ai-soft)}
+.tl-hours{display:grid;grid-template-columns:repeat(var(--n),1fr);font-size:11px;color:var(--muted);font-family:var(--mono)}
+.tl-hours span{padding:6px 0 6px 4px;border-left:1px solid var(--rule2)}
+.tl-bar{position:absolute;top:8px;height:30px;border-radius:2px;background:var(--c);color:#fff;font-size:12px;padding:0 8px;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.tl-bar.off{background:transparent;border:1.5px dashed var(--off);color:var(--muted);box-shadow:none}
+.tl-bar .t{font-family:var(--mono);font-size:11px;opacity:.9}
+.tl-bar .w{background:var(--warn);color:#1a1200;border-radius:2px;font-size:10px;font-weight:700;width:16px;height:16px;display:grid;place-items:center}
+.tl-cov{display:grid;grid-template-columns:repeat(var(--n),1fr);height:60px;align-items:end}
+.tl-cov div{display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;border-left:1px solid var(--rule2);font-size:11px;font-family:var(--mono);color:var(--muted)}
+.tl-cov div i{display:block;width:70%;background:var(--ai);opacity:.7}
+.tl-cov div.zero i{background:var(--shu)}
+
+/* panels, forms */
+.panel{background:var(--paper);border:1px solid var(--rule);padding:14px 16px}
+.panel h2{font-family:var(--display);font-size:16px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--rule2);letter-spacing:.02em}
+.panel h2 .sub{font-family:var(--font);font-weight:400;font-size:12px;color:var(--muted);margin-left:10px;letter-spacing:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:12px;color:var(--muted);letter-spacing:.02em}
+.field input,.field select,.field textarea{border:1px solid var(--rule);background:var(--paper);border-radius:var(--r);padding:6px 8px;min-width:0;width:100%}
+.field input[type=time],.field input[type=number],.field input[type=date],.field input[type=month],.field input.num{font-family:var(--mono)}
+.field input[type=color]{padding:2px;height:34px;width:48px}
+.chk{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid var(--rule);border-radius:var(--r);cursor:pointer;user-select:none}
+.chk input{margin:0}
+.chk.sat{color:var(--sat)}.chk.sun{color:var(--sun)}
+.tplbtn{border:1px solid var(--rule);background:var(--paper);border-radius:var(--r);padding:5px 10px;display:inline-flex;align-items:center;gap:6px}
+.tplbtn i{width:10px;height:10px;border-radius:1px;background:var(--c)}
+.tplbtn[aria-pressed="true"]{border-color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent)}
+.hint{font-size:12px;color:var(--muted)}
+.empty{border:1px dashed var(--rule);padding:28px 20px;text-align:center;background:var(--paper);display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty h2{font-family:var(--display);font-size:17px}
+.empty p{margin:0;max-width:34em;color:var(--muted)}
+.staff-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.scard{background:var(--paper);border:1px solid var(--rule);padding:10px 12px 10px 14px;display:flex;flex-direction:column;gap:6px;position:relative}
+.scard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+.scard .nm{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+.scard .nm small{font-weight:400;color:var(--muted);font-size:12px}
+.scard .meta{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.scard .wd{display:flex;gap:2px}
+.scard .wd span{width:20px;height:20px;border-radius:2px;display:grid;place-items:center;font-size:11px;background:var(--paper2);color:var(--muted)}
+.scard .wd span.on{background:var(--ai-soft);color:var(--ai);font-weight:700}
+table.list{border-collapse:collapse;width:100%}
+table.list th,table.list td{padding:6px 8px;border-bottom:1px solid var(--rule2);text-align:left;white-space:nowrap;vertical-align:middle}
+table.list th{font-size:12px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--rule)}
+table.list td.r,table.list th.r{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+table.list tr.tot td{font-weight:700;border-top:2px solid var(--rule)}
+table.list input.cellin{width:90px;text-align:right;border:1px solid var(--rule);border-radius:2px;padding:3px 5px;font-family:var(--mono);background:var(--paper)}
+.warnlist{display:flex;flex-direction:column;gap:4px}
+.warnlist div{padding:5px 8px;border-left:3px solid var(--warn);background:var(--warn-soft);font-size:13px}
+.warnlist div.under{border-color:var(--shu);background:var(--shu-soft)}
+.sumline{display:flex;flex-wrap:wrap;background:var(--paper);border:1px solid var(--rule)}
+.sumline div{padding:10px 16px;border-right:1px solid var(--rule2);display:flex;flex-direction:column;gap:2px;min-width:140px;flex:1}
+.sumline div:last-child{border-right:0}
+.sumline .k{font-size:12px;color:var(--muted)}
+.sumline .v{font-size:20px;font-weight:700;font-family:var(--mono);font-variant-numeric:tabular-nums;line-height:1.2}
+.sumline .v small{font-size:12px;font-family:var(--font);font-weight:400;color:var(--muted)}
+.sumline .bad .v{color:var(--shu)}
+table.req{border-collapse:collapse}
+table.req th,table.req td{border:1px solid var(--rule2);padding:4px 6px;text-align:center}
+table.req input{width:52px;text-align:center;border:1px solid var(--rule);border-radius:2px;padding:3px;font-family:var(--mono);background:var(--paper)}
+table.req th.sat{color:var(--sat)}table.req th.sun{color:var(--sun)}
+.tplrow{display:grid;grid-template-columns:40px 1fr 100px 100px 80px 36px;gap:6px;align-items:center}
+.tplrow input{border:1px solid var(--rule);border-radius:2px;padding:5px 6px;background:var(--paper);min-width:0;width:100%}
+.tplrow input[type=color]{padding:1px;height:32px}
+.tplrow input[type=time],.tplrow input[type=number]{font-family:var(--mono)}
+.tplhead{font-size:11px;color:var(--muted)}
+details.fold{border:1px solid var(--rule);background:var(--paper)}
+details.fold summary{cursor:pointer;padding:10px 16px;font-weight:500;list-style:none;display:flex;align-items:center;gap:8px}
+details.fold summary::before{content:"▸";color:var(--muted);font-size:12px}
+details.fold[open] summary::before{content:"▾"}
+details.fold summary::-webkit-details-marker{display:none}
+details.fold .body{padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--rule2)}
+
+/* requests */
+.reqgroup{display:flex;flex-direction:column;gap:0;border:1px solid var(--rule);background:var(--paper)}
+.reqgroup .gh{padding:8px 12px;background:var(--paper2);font-weight:500;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--rule2)}
+.reqrow{display:grid;grid-template-columns:150px 1fr auto;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--rule2)}
+.reqrow:last-child{border-bottom:0}
+.reqrow .who{display:flex;align-items:center;gap:7px;font-weight:500}
+.reqrow .who .dot{width:9px;height:9px;border-radius:1px;background:var(--c);flex:none}
+.reqrow .what{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;min-width:0}
+.reqrow .what .note{color:var(--muted);font-size:12px}
+.kind{display:inline-flex;align-items:center;gap:5px;padding:1px 7px;border-radius:2px;font-size:12px;border:1px solid var(--rule)}
+.kind.off{border-style:dashed;color:var(--muted)}
+.kind.work{border-color:var(--c);color:var(--c)}
+.kind.conf{border-color:var(--shu);color:var(--shu);background:var(--shu-soft)}
+.st{font-size:11px;padding:1px 6px;border-radius:2px;border:1px solid var(--rule);color:var(--muted)}
+.st.pending{border-color:var(--ai);color:var(--ai)}
+.st.approved{border-color:var(--ok);color:var(--ok)}
+.st.rejected{border-color:var(--rule);color:var(--muted);text-decoration:line-through}
+@media (max-width:760px){.reqrow{grid-template-columns:1fr;gap:6px}}
+
+/* submit (staff) */
+.submit-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px}
+.submit-head h2{font-family:var(--display);font-size:18px}
+.mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.mgrid .mh{background:var(--paper2);padding:5px;text-align:center;font-size:12px;color:var(--muted)}
+.mgrid .mh.sat{color:var(--sat)}.mgrid .mh.sun{color:var(--sun)}
+.sday{background:var(--paper);min-height:78px;padding:5px 6px;display:flex;flex-direction:column;gap:3px;cursor:pointer;min-width:0;position:relative}
+.sday:hover{background:var(--ai-soft)}
+.sday.out{opacity:.35;cursor:default}
+.sday.past{opacity:.55;cursor:default;background:var(--paper2)}
+.sday.today{background:var(--today)}
+.sday .d{font-family:var(--display);font-size:15px;font-weight:700;display:flex;gap:6px;align-items:baseline}
+.sday .d small{font-family:var(--font);font-weight:400;font-size:10px;color:var(--sun);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sday.sat .d{color:var(--sat)}.sday.sun .d,.sday.hol .d{color:var(--sun)}
+.sday .fixed{font-size:11px;padding:1px 5px;border-left:3px solid var(--c);background:var(--paper2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sday .fixed.off{border-left-style:dashed;color:var(--muted)}
+.sday .mine{font-size:11px;padding:1px 5px;border:1.5px dotted var(--ai);color:var(--ai);border-radius:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sday .mine.approved{border-style:solid;background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+.sday .mine.rejected{border-style:solid;color:var(--muted);text-decoration:line-through;border-color:var(--rule)}
+@media (max-width:760px){.sday{min-height:58px;padding:3px 4px}.sday .fixed,.sday .mine{font-size:10px;padding:0 3px}}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:12px;color:var(--muted);align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:2px}
+
+/* payroll */
+.payhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.payhead .per{font-family:var(--mono);font-size:13px;color:var(--ink2)}
+.acct{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.acct.none{color:var(--shu);font-family:var(--font)}
+.paid{color:var(--ok);font-weight:700}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(14,18,22,.5);display:grid;place-items:center;z-index:50;padding:16px}
+.sheet{background:var(--paper);border:1px solid var(--rule);box-shadow:var(--shadow);width:min(600px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.sheet.wide{width:min(760px,100%)}
+.sheet h2{font-family:var(--display);font-size:17px;font-weight:700}
+.sheet .foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px}
+.sheet .foot .left{margin-right:auto}
+.sheet textarea{width:100%;min-height:200px;font-family:var(--mono);font-size:12px;border:1px solid var(--rule);border-radius:var(--r);padding:8px;background:var(--paper2)}
+.sheet h3{font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.04em;margin-top:4px;padding-bottom:4px;border-bottom:1px solid var(--rule2)}
+.toasts{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:60;pointer-events:none}
+.toast{background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:var(--r);font-size:13px;box-shadow:var(--shadow);animation:up .2s ease-out}
+.toast.bad{background:var(--shu);color:#fff}
+.toast.ok{background:var(--ok);color:#fff}
+@keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}td.cell{transition:none}}
+.ro-bar{background:var(--warn-soft);color:var(--ink);padding:6px 16px;font-size:13px;text-align:center;border-bottom:1px solid var(--warn)}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--rule);border-bottom-width:2px;border-radius:2px;padding:0 4px;background:var(--paper2)}
+.pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.pick button{border:1px solid var(--rule);background:var(--paper);padding:10px 12px;text-align:left;display:flex;align-items:center;gap:8px;border-radius:var(--r)}
+.pick button:hover{background:var(--ai-soft)}
+.pick button:disabled{opacity:.5;cursor:default}
+.pick .dot{width:10px;height:10px;border-radius:1px;background:var(--c)}
+.pick small{display:block;color:var(--muted);font-size:11px}
+
+@media (max-width:760px){
+  .top{padding:0 12px;gap:4px 12px}
+  .brand{padding:8px 0}
+  .brand h1{max-width:52vw;font-size:17px}
+  .tabs{order:3;width:100%;margin:0 -12px;padding:0 12px}
+  .tabs button{padding:10px 9px 9px;font-size:13px}
+  .period{margin-left:0;width:100%;justify-content:center;order:4;padding:6px 0}
+  .period .lbl{min-width:0;flex:1}
+  .actions{order:5;padding:0 0 8px}
+  main{padding:10px 16px 20px}
+  .mday{min-height:64px;padding:4px}
+  .mchip,.mmore{display:none}
+}
+</style>
+
+<header class="top">
+  <div class="brand">
+    <h1 id="storeName">シフトボード</h1>
+    <span class="tag" id="syncBadge">読み込み中</span>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="表示切替"></nav>
+  <div class="period" id="period">
+    <button class="btn icon" id="prevBtn" aria-label="前へ">‹</button>
+    <button class="btn" id="todayBtn">今日</button>
+    <button class="btn icon" id="nextBtn" aria-label="次へ">›</button>
+    <span class="lbl num" id="periodLabel"></span>
+  </div>
+  <div class="actions" id="actions">
+    <button class="btn" id="undoBtn" title="元に戻す (Ctrl+Z)" disabled>戻す</button>
+    <button class="btn" id="redoBtn" title="やり直す (Ctrl+Y)" disabled>やり直す</button>
+    <button class="btn" id="copyPrevBtn" title="前の週のシフトをこの週へ複製">前週コピー</button>
+    <button class="btn primary" id="autoBtn" title="必要人数の不足枠を自動で埋める">自動割当</button>
+    <button class="btn" id="shareBtn">共有・書き出し</button>
+  </div>
+</header>
+<div class="ro-bar" id="roBar" hidden>閲覧のみの権限です。シフトの変更はできません。</div>
+<main><div class="view" id="view"></div></main>
+<div class="toasts" id="toasts"></div>
+
+<script>
+(() => {
+'use strict';
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const fill = (el, ...k) => el.replaceChildren(...k.flat(Infinity).filter(x => x != null && x !== false));
+const pad = n => String(n).padStart(2, '0');
+const fmtD = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addD = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const dayIdx = s => Math.round(parseD(s).getTime() / 86400000);
+const WD = ['日', '月', '火', '水', '木', '金', '土'];
+const startOfWeek = (d, ws) => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() - ws + 7) % 7)); return x; };
+const mmToStr = m => (m >= 1440 ? '翌' : '') + pad(Math.floor((m % 1440) / 60)) + ':' + pad(m % 60);
+const toTimeVal = m => pad(Math.floor((m % 1440) / 60)) + ':' + pad(m % 60);
+const strToMm = s => { const [h, m] = (s || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+const fmtH = h => (Math.round(h * 10) / 10).toFixed(1);
+const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
+const uid = p => p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const todayStr = () => fmtD(new Date());
+const dayLabel = ds => { const d = parseD(ds); return `${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]})`; };
+const ymOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+const lastDay = (y, m) => new Date(y, m + 1, 0).getDate();
+function h(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  if (props) for (const k in props) {
+    const v = props[k];
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'style') e.style.cssText = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'dataset') Object.assign(e.dataset, v);
+    else if (k === 'value') e.value = v;
+    else if (k === 'checked') e.checked = true;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) { if (c == null || c === false) continue; e.append(c.nodeType ? c : document.createTextNode(String(c))); }
+  return e;
+}
+const HOLIDAYS = {
+  '2026-01-01': '元日', '2026-01-12': '成人の日', '2026-02-11': '建国記念の日', '2026-02-23': '天皇誕生日', '2026-03-20': '春分の日', '2026-04-29': '昭和の日', '2026-05-03': '憲法記念日', '2026-05-04': 'みどりの日', '2026-05-05': 'こどもの日', '2026-05-06': '振替休日', '2026-07-20': '海の日', '2026-08-11': '山の日', '2026-09-21': '敬老の日', '2026-09-22': '国民の休日', '2026-09-23': '秋分の日', '2026-10-12': 'スポーツの日', '2026-11-03': '文化の日', '2026-11-23': '勤労感謝の日',
+  '2027-01-01': '元日', '2027-01-11': '成人の日', '2027-02-11': '建国記念の日', '2027-02-23': '天皇誕生日', '2027-03-21': '春分の日', '2027-03-22': '振替休日', '2027-04-29': '昭和の日', '2027-05-03': '憲法記念日', '2027-05-04': 'みどりの日', '2027-05-05': 'こどもの日', '2027-07-19': '海の日', '2027-08-11': '山の日', '2027-09-20': '敬老の日', '2027-09-23': '秋分の日', '2027-10-11': 'スポーツの日', '2027-11-03': '文化の日', '2027-11-23': '勤労感謝の日'
+};
+const PALETTE = ['#c9553f', '#d2802f', '#a88a1a', '#4a8f4a', '#2a8c80', '#3b78b8', '#6a5cc4', '#a356a3', '#876a4e', '#5a7686'];
+const DEFAULT_SETTINGS = {
+  storeName: 'シフトボード', weekStart: 1, minRest: 11, maxConsecutive: 6, showHolidays: true,
+  reqDeadlineDay: 20, reqHorizonMonths: 1, reqNotice: '',
+  templates: [
+    { id: 't_early', name: '早番', start: 360, end: 840, brk: 60, color: '#d2802f' },
+    { id: 't_mid', name: '中番', start: 600, end: 1080, brk: 60, color: '#2a8c80' },
+    { id: 't_late', name: '遅番', start: 840, end: 1320, brk: 60, color: '#6a5cc4' }
+  ],
+  required: { 0: { t_early: 2, t_mid: 2, t_late: 2 }, 1: { t_early: 1, t_mid: 1, t_late: 1 }, 2: { t_early: 1, t_mid: 1, t_late: 1 }, 3: { t_early: 1, t_mid: 1, t_late: 1 }, 4: { t_early: 1, t_mid: 1, t_late: 1 }, 5: { t_early: 1, t_mid: 1, t_late: 1 }, 6: { t_early: 2, t_mid: 2, t_late: 2 } }
+};
+const DEFAULT_COMPANY = { closingDay: 0, payDay: 25, payMonthOffset: 1, nightRate: 25, otRate: 25, otDaily: true, crlf: true, clientCode: '', bank: { bankCode: '', bankName: '', branchCode: '', branchName: '', type: '1', number: '', holder: '' } };
+const EMPTY_PAY = () => ({ wage: 0, transport: 0, allowance: 0, bank: { bankCode: '', bankName: '', branchCode: '', branchName: '', type: '1', number: '', holder: '' } });
+
+// ---------- 全銀フォーマット（総合振込）----------
+// Bank files take half-width katakana, uppercase letters, digits and a few symbols in Shift_JIS. Everything is single-byte, so bytes = chars.
+const KANA = { 'ァ': 'ｱ', 'ア': 'ｱ', 'ィ': 'ｲ', 'イ': 'ｲ', 'ゥ': 'ｳ', 'ウ': 'ｳ', 'ェ': 'ｴ', 'エ': 'ｴ', 'ォ': 'ｵ', 'オ': 'ｵ', 'カ': 'ｶ', 'ガ': 'ｶﾞ', 'キ': 'ｷ', 'ギ': 'ｷﾞ', 'ク': 'ｸ', 'グ': 'ｸﾞ', 'ケ': 'ｹ', 'ゲ': 'ｹﾞ', 'コ': 'ｺ', 'ゴ': 'ｺﾞ', 'サ': 'ｻ', 'ザ': 'ｻﾞ', 'シ': 'ｼ', 'ジ': 'ｼﾞ', 'ス': 'ｽ', 'ズ': 'ｽﾞ', 'セ': 'ｾ', 'ゼ': 'ｾﾞ', 'ソ': 'ｿ', 'ゾ': 'ｿﾞ', 'タ': 'ﾀ', 'ダ': 'ﾀﾞ', 'チ': 'ﾁ', 'ヂ': 'ﾁﾞ', 'ッ': 'ﾂ', 'ツ': 'ﾂ', 'ヅ': 'ﾂﾞ', 'テ': 'ﾃ', 'デ': 'ﾃﾞ', 'ト': 'ﾄ', 'ド': 'ﾄﾞ', 'ナ': 'ﾅ', 'ニ': 'ﾆ', 'ヌ': 'ﾇ', 'ネ': 'ﾈ', 'ノ': 'ﾉ', 'ハ': 'ﾊ', 'バ': 'ﾊﾞ', 'パ': 'ﾊﾟ', 'ヒ': 'ﾋ', 'ビ': 'ﾋﾞ', 'ピ': 'ﾋﾟ', 'フ': 'ﾌ', 'ブ': 'ﾌﾞ', 'プ': 'ﾌﾟ', 'ヘ': 'ﾍ', 'ベ': 'ﾍﾞ', 'ペ': 'ﾍﾟ', 'ホ': 'ﾎ', 'ボ': 'ﾎﾞ', 'ポ': 'ﾎﾟ', 'マ': 'ﾏ', 'ミ': 'ﾐ', 'ム': 'ﾑ', 'メ': 'ﾒ', 'モ': 'ﾓ', 'ャ': 'ﾔ', 'ヤ': 'ﾔ', 'ュ': 'ﾕ', 'ユ': 'ﾕ', 'ョ': 'ﾖ', 'ヨ': 'ﾖ', 'ラ': 'ﾗ', 'リ': 'ﾘ', 'ル': 'ﾙ', 'レ': 'ﾚ', 'ロ': 'ﾛ', 'ヮ': 'ﾜ', 'ワ': 'ﾜ', 'ヰ': 'ｲ', 'ヱ': 'ｴ', 'ヲ': 'ｦ', 'ン': 'ﾝ', 'ヴ': 'ｳﾞ', 'ヵ': 'ｶ', 'ヶ': 'ｹ', 'ー': 'ｰ', '゛': 'ﾞ', '゜': 'ﾟ', '　': ' ', '（': '(', '）': ')', '－': '-', '‐': '-', '．': '.', '／': '/', '，': ',', '、': ',', '。': '.', '「': '｢', '」': '｣', '￥': '\\', '¥': '\\' };
+const SMALL = { 'ｧ': 'ｱ', 'ｨ': 'ｲ', 'ｩ': 'ｳ', 'ｪ': 'ｴ', 'ｫ': 'ｵ', 'ｬ': 'ﾔ', 'ｭ': 'ﾕ', 'ｮ': 'ﾖ', 'ｯ': 'ﾂ' };
+function toBankKana(str) {
+  let out = ''; const bad = [];
+  for (let ch of String(str || '')) {
+    const c = ch.codePointAt(0);
+    if (c >= 0x3041 && c <= 0x3096) ch = String.fromCodePoint(c + 0x60);          // ひらがな → カタカナ
+    if (KANA[ch] != null) { out += KANA[ch]; continue; }
+    if (c >= 0xFF10 && c <= 0xFF19) { out += String.fromCharCode(c - 0xFF10 + 48); continue; }   // 全角数字
+    if (c >= 0xFF21 && c <= 0xFF3A) { out += String.fromCharCode(c - 0xFF21 + 65); continue; }   // 全角英大
+    if (c >= 0xFF41 && c <= 0xFF5A) { out += String.fromCharCode(c - 0xFF41 + 65); continue; }   // 全角英小 → 大
+    if (c >= 0x61 && c <= 0x7A) { out += ch.toUpperCase(); continue; }
+    if (c >= 0xFF61 && c <= 0xFF9F) { out += SMALL[ch] || ch; continue; }
+    if (/[0-9A-Z ()\-.\/,\\｢｣]/.test(ch)) { out += ch; continue; }
+    bad.push(ch);
+  }
+  return { text: out, bad };
+}
+function sjisBytes(str) { const b = new Uint8Array(str.length); for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); b[i] = (c >= 0xFF61 && c <= 0xFF9F) ? c - 0xFF61 + 0xA1 : (c < 0x80 ? c : 0x20); } return b; }
+const padR = (s, n) => (s.length >= n ? s.slice(0, n) : s + ' '.repeat(n - s.length));
+const padN = (v, n) => String(v || '').replace(/\D/g, '').padStart(n, '0').slice(-n);
+function zenginFile(company, rows, payDate) {
+  const b = company.bank || {}; const mmdd = pad(payDate.getMonth() + 1) + pad(payDate.getDate());
+  const lines = [];
+  lines.push('1' + '21' + '0' + padN(company.clientCode, 10) + padR(toBankKana(b.holder).text, 40) + mmdd + padN(b.bankCode, 4) + padR(toBankKana(b.bankName).text, 15) + padN(b.branchCode, 3) + padR(toBankKana(b.branchName).text, 15) + (b.type === '2' ? '2' : '1') + padN(b.number, 7) + ' '.repeat(17));
+  let total = 0;
+  rows.forEach(r => { const k = r.bank; total += r.amount; lines.push('2' + padN(k.bankCode, 4) + padR(toBankKana(k.bankName).text, 15) + padN(k.branchCode, 3) + padR(toBankKana(k.branchName).text, 15) + ' '.repeat(4) + (k.type === '2' ? '2' : '1') + padN(k.number, 7) + padR(toBankKana(k.holder).text, 30) + padN(r.amount, 10) + '0' + ' '.repeat(10) + ' '.repeat(10) + '7' + ' ' + ' '.repeat(7)); });
+  lines.push('8' + padN(rows.length, 6) + padN(total, 12) + ' '.repeat(101));
+  lines.push('9' + ' '.repeat(119));
+  const nl = company.crlf === false ? '' : '\r\n';
+  return { bytes: sjisBytes(lines.join(nl) + (nl ? nl : '')), total, count: rows.length, lines };
+}
+
+// ---------- state ----------
+const S = { staff: {}, shifts: {}, settings: null, payroll: {}, company: null, months: {}, requests: {}, myReq: null, ready: false };
+let view = 'week', cur = new Date(); cur.setHours(0, 0, 0, 0);
+let payYm = ymOf(new Date());
+let db = null, downloads = null, userApi = null, me = null, role = 'local', readOnly = false, backend = 'local';
+let unsubShifts = null, loadedKey = '', unsubMonth = null, monthKey = '';
+const LS_KEY = 'shiftboard.v1';
+const undoStack = [], redoStack = [];
+const names = {};
+const settings = () => S.settings || DEFAULT_SETTINGS;
+const company = () => ({ ...DEFAULT_COMPANY, ...(S.company || {}), bank: { ...DEFAULT_COMPANY.bank, ...((S.company || {}).bank || {}) } });
+const payOf = id => { const p = S.payroll[id]; return p ? { ...EMPTY_PAY(), ...p, bank: { ...EMPTY_PAY().bank, ...(p.bank || {}) } } : EMPTY_PAY(); };
+const staffList = () => Object.values(S.staff).sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name, 'ja'));
+const tplOf = id => settings().templates.find(t => t.id === id);
+const hours = s => s.kind === 'work' ? Math.max(0, s.end - s.start - (s.brk || 0)) / 60 : 0;
+const absStart = s => dayIdx(s.date) * 1440 + s.start;
+const absEnd = s => dayIdx(s.date) * 1440 + s.end;
+const chipColor = s => s.kind === 'off' ? 'var(--off)' : (tplOf(s.tpl)?.color || '#5b6b7c');
+const chipName = s => s.kind === 'off' ? '希望休' : (tplOf(s.tpl)?.name || '勤務');
+const isAdmin = () => role === 'owner' || role === 'local';
+const canWrite = () => isAdmin() && !readOnly;
+
+// ---------- persistence ----------
+function loadLocal() { try { const j = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (j) { S.staff = j.staff || {}; S.shifts = j.shifts || {}; S.settings = j.settings || null; S.payroll = j.payroll || {}; S.company = j.company || null; S.months = j.months || {}; } } catch (e) { } }
+function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify({ staff: S.staff, shifts: S.shifts, settings: S.settings, payroll: S.payroll, company: S.company, months: S.months })); } catch (e) { } }
+function writeErr(e) { console.error(e); const c = e && e.code; if (c === 'invalid_argument' && db) { readOnly = true; $('#roBar').hidden = false; toast('保存できませんでした。この権限では閲覧のみです', 'bad'); } else if (c === 'quota_exceeded') toast('保存容量の上限です。古いシフトを削除してください', 'bad'); else toast('保存に失敗しました。もう一度お試しください', 'bad'); render(); }
+async function writeDoc(path, data) { if (db) await db.doc(path).set(data); else saveLocal(); }
+async function deleteDoc(path) { if (db) await db.doc(path).delete(); else saveLocal(); }
+async function persistShiftOps(ops, dir) {
+  const jobs = ops.map(op => { const v = op[dir]; return v ? writeDoc('shifts/' + op.id, v) : deleteDoc('shifts/' + op.id); });
+  try { for (let i = 0; i < jobs.length; i += 8) await Promise.all(jobs.slice(i, i + 8)); } catch (e) { writeErr(e); }
+}
+function applyOps(ops, dir) { for (const op of ops) { const v = op[dir]; if (v) S.shifts[op.id] = v; else delete S.shifts[op.id]; } render(); return persistShiftOps(ops, dir); }
+function commit(label, ops) {
+  if (!ops.length) return;
+  if (!canWrite()) { toast('閲覧のみの権限です', 'bad'); return; }
+  undoStack.push({ label, ops }); if (undoStack.length > 60) undoStack.shift(); redoStack.length = 0;
+  applyOps(ops, 'after'); updateUndo();
+}
+function undo() { const e = undoStack.pop(); if (!e) return; redoStack.push(e); applyOps(e.ops, 'before'); updateUndo(); toast('戻しました: ' + e.label); }
+function redo() { const e = redoStack.pop(); if (!e) return; undoStack.push(e); applyOps(e.ops, 'after'); updateUndo(); toast('やり直しました: ' + e.label); }
+function updateUndo() { $('#undoBtn').disabled = !undoStack.length || !canWrite(); $('#redoBtn').disabled = !redoStack.length || !canWrite(); }
+async function saveStaff(p) { S.staff[p.id] = p; render(); try { await writeDoc('staff/' + p.id, p); } catch (e) { writeErr(e); } }
+async function savePay(id, pr) { S.payroll[id] = pr; render(); try { await writeDoc('payroll/' + id, pr); } catch (e) { writeErr(e); } }
+async function saveCompany(c) { S.company = c; render(); try { await writeDoc('payroll/_company', c); } catch (e) { writeErr(e); } }
+let monthWriteChain = Promise.resolve();
+function saveMonth(ym, m) { S.months[ym] = m; monthWriteChain = monthWriteChain.then(() => writeDoc('payroll/_m_' + ym, m)).catch(writeErr); return monthWriteChain; }
+async function removeStaff(id) {
+  const ops = Object.values(S.shifts).filter(s => s.staffId === id).map(s => ({ id: s.id, before: s, after: null }));
+  delete S.staff[id]; delete S.payroll[id]; for (const op of ops) delete S.shifts[op.id]; render();
+  try { await deleteDoc('staff/' + id); await deleteDoc('payroll/' + id); await persistShiftOps(ops, 'after'); } catch (e) { writeErr(e); }
+}
+async function saveSettings(st) { S.settings = st; render(); try { await writeDoc('settings/main', st); } catch (e) { writeErr(e); } }
+// staff-side request document: requests/<my id>
+async function saveMyReq(doc) { if (!db || !me) return; S.myReq = doc; render(); try { await db.doc('requests/' + me).set(doc); } catch (e) { console.error(e); toast('送信できませんでした。管理者に「編集者」として招待されているか確認してください', 'bad'); } }
+async function updateReq(uidKey, patch) { if (!db) return; try { await db.doc('requests/' + uidKey).update(patch); } catch (e) { console.error(e); toast('申請の更新に失敗しました', 'bad'); } }
+
+// ---------- ranges ----------
+function visibleRange() {
+  const st = settings();
+  if (view === 'month' || view === 'summary') { const a = new Date(cur.getFullYear(), cur.getMonth(), 1), b = new Date(cur.getFullYear(), cur.getMonth() + 1, 0); return { from: fmtD(a), to: fmtD(b) }; }
+  if (view === 'day') return { from: fmtD(cur), to: fmtD(cur) };
+  const a = startOfWeek(cur, st.weekStart); return { from: fmtD(a), to: fmtD(addD(a, 6)) };
+}
+function loadRange() {
+  const st = settings(); const w = startOfWeek(cur, st.weekStart);
+  let a = new Date(Math.min(w, new Date(cur.getFullYear(), cur.getMonth(), 1)));
+  let b = new Date(Math.max(addD(w, 6), new Date(cur.getFullYear(), cur.getMonth() + 1, 0)));
+  if (view === 'payroll') { const p = payPeriod(payYm); a = new Date(Math.min(a, parseD(p.from))); b = new Date(Math.max(b, parseD(p.to))); }
+  if (view === 'submit') { const n = new Date(); b = new Date(Math.max(b, new Date(n.getFullYear(), n.getMonth() + 1 + (settings().reqHorizonMonths || 1), 0))); }
+  return { from: fmtD(addD(a, -14)), to: fmtD(addD(b, 14)) };
+}
+function ensureShiftSub() {
+  if (!db) return;
+  const r = loadRange(); const key = r.from + '|' + r.to; if (key === loadedKey) return; loadedKey = key;
+  if (unsubShifts) unsubShifts();
+  unsubShifts = db.collection('shifts').where('date', '>=', r.from).where('date', '<=', r.to).onSnapshot(qs => {
+    const next = {}; qs.docs.forEach(d => { next[d.id] = { id: d.id, ...d.data() }; });
+    for (const id in S.shifts) if (S.shifts[id].date < r.from || S.shifts[id].date > r.to) next[id] = S.shifts[id];
+    S.shifts = next; S.ready = true; render();
+  }, err => { console.error(err); if (err.code === 'unavailable') { loadedKey = ''; ensureShiftSub(); } });
+}
+function ensureMonthSub() {
+  if (!db || role !== 'owner') return;
+  if (monthKey === payYm) return; monthKey = payYm;
+  if (unsubMonth) unsubMonth();
+  unsubMonth = db.doc('payroll/_m_' + payYm).onSnapshot(snap => { if (snap.exists) S.months[payYm] = snap.data(); else delete S.months[payYm]; if (view === 'payroll') render(); }, err => console.error(err));
+}
+
+// ---------- analysis ----------
+function analyze(from, to) {
+  const st = settings(); const res = { shift: {}, under: {}, staffWeek: {} };
+  const note = (id, m) => { (res.shift[id] || (res.shift[id] = [])).push(m); };
+  const lo = fmtD(addD(parseD(from), -7)), hi = fmtD(addD(parseD(to), 7));
+  const all = Object.values(S.shifts).filter(s => s.date >= lo && s.date <= hi && S.staff[s.staffId]);
+  const byStaff = {}; all.forEach(s => { (byStaff[s.staffId] || (byStaff[s.staffId] = [])).push(s); });
+  for (const sid in byStaff) {
+    const p = S.staff[sid]; const list = byStaff[sid].sort((a, b) => absStart(a) - absStart(b));
+    const offDates = new Set(list.filter(s => s.kind === 'off').map(s => s.date));
+    const work = list.filter(s => s.kind === 'work');
+    work.forEach(s => { if (offDates.has(s.date)) note(s.id, '希望休の日に勤務'); if (p.avail && p.avail[parseD(s.date).getDay()] === false) note(s.id, '出勤できない曜日'); });
+    for (let i = 0; i < work.length - 1; i++) {
+      const a = work[i], b = work[i + 1]; const gap = absStart(b) - absEnd(a);
+      if (gap < 0) { note(a.id, '時間が重複'); note(b.id, '時間が重複'); }
+      else if (gap < st.minRest * 60) note(b.id, `前の勤務との間隔 ${fmtH(gap / 60)}h（${st.minRest}h 必要）`);
+    }
+    const wk = {}; work.forEach(s => { const k = fmtD(startOfWeek(parseD(s.date), st.weekStart)); wk[k] = (wk[k] || 0) + hours(s); });
+    res.staffWeek[sid] = wk;
+    if (p.maxHours > 0) work.forEach(s => { const k = fmtD(startOfWeek(parseD(s.date), st.weekStart)); if (wk[k] > p.maxHours + 1e-9) note(s.id, `週 ${fmtH(wk[k])}h（上限 ${p.maxHours}h）`); });
+    const days = [...new Set(work.map(s => s.date))].sort(); let run = 0, prev = null;
+    days.forEach(d => { run = (prev && dayIdx(d) === dayIdx(prev) + 1) ? run + 1 : 1; prev = d; if (run > st.maxConsecutive) work.filter(s => s.date === d).forEach(s => note(s.id, `${run}連勤`)); });
+  }
+  for (let d = parseD(from); fmtD(d) <= to; d = addD(d, 1)) {
+    const ds = fmtD(d); const need = st.required[d.getDay()] || {}; const u = res.under[ds] = {};
+    st.templates.forEach(t => { u[t.id] = { need: need[t.id] || 0, have: all.filter(s => s.kind === 'work' && s.date === ds && s.tpl === t.id).length }; });
+  }
+  return res;
+}
+function autoAssignPlan(from, to) {
+  const st = settings(); const staff = staffList(); const ops = []; let unfilled = 0;
+  const lo = fmtD(addD(parseD(from), -7)), hi = fmtD(addD(parseD(to), 7));
+  const pool = Object.values(S.shifts).filter(s => s.date >= lo && s.date <= hi);
+  const has = (sid, ds) => pool.some(s => s.staffId === sid && s.date === ds);
+  const weekKey = ds => fmtD(startOfWeek(parseD(ds), st.weekStart));
+  const weekH = (sid, ds) => { const k = weekKey(ds); return pool.filter(s => s.staffId === sid && s.kind === 'work' && weekKey(s.date) === k).reduce((a, s) => a + hours(s), 0); };
+  const restOk = (sid, ds, t) => { const di = dayIdx(ds), a = di * 1440 + t.start, b = di * 1440 + t.end; return pool.filter(s => s.staffId === sid && s.kind === 'work' && Math.abs(dayIdx(s.date) - di) <= 1).every(s => (a - absEnd(s) >= st.minRest * 60) || (absStart(s) - b >= st.minRest * 60)); };
+  const consecOk = (sid, ds) => { const di = dayIdx(ds); const w = new Set(pool.filter(s => s.staffId === sid && s.kind === 'work').map(s => dayIdx(s.date))); let n = 1; for (let i = di - 1; w.has(i); i--) n++; for (let i = di + 1; w.has(i); i++) n++; return n <= st.maxConsecutive; };
+  const pendingOff = (sid, ds) => Object.values(S.requests).some(r => r.staffId === sid && Object.values(r.items || {}).some(it => it.date === ds && it.kind === 'off' && it.status === 'pending'));
+  for (let d = parseD(from); fmtD(d) <= to; d = addD(d, 1)) {
+    const ds = fmtD(d), wd = d.getDay(); const need = st.required[wd] || {};
+    for (const t of st.templates) {
+      const n = need[t.id] || 0; let have = pool.filter(s => s.kind === 'work' && s.date === ds && s.tpl === t.id).length; const th = (t.end - t.start - t.brk) / 60;
+      while (have < n) {
+        const cands = staff.filter(p => (!p.avail || p.avail[wd] !== false) && !has(p.id, ds) && !pendingOff(p.id, ds) && (!(p.maxHours > 0) || weekH(p.id, ds) + th <= p.maxHours + 1e-9) && restOk(p.id, ds, t) && consecOk(p.id, ds))
+          .sort((a, b) => weekH(a.id, ds) - weekH(b.id, ds) || (a.order ?? 0) - (b.order ?? 0));
+        if (!cands.length) { unfilled += n - have; break; }
+        const sh = { id: uid('sh'), date: ds, staffId: cands[0].id, kind: 'work', start: t.start, end: t.end, brk: t.brk, tpl: t.id, note: '' };
+        pool.push(sh); ops.push({ id: sh.id, before: null, after: sh }); have++;
+      }
+    }
+  }
+  return { ops, unfilled };
+}
+
+// ---------- payroll ----------
+function payPeriod(ym) {
+  const [y, m] = ym.split('-').map(Number); const c = company(); const cd = Number(c.closingDay) || 0;
+  let from, to;
+  if (cd <= 0 || cd >= 28) { from = new Date(y, m - 1, 1); to = new Date(y, m, 0); }
+  else { from = new Date(y, m - 2, cd + 1); to = new Date(y, m - 1, cd); }
+  const pm = new Date(to.getFullYear(), to.getMonth() + (Number(c.payMonthOffset) || 0), 1);
+  const pay = new Date(pm.getFullYear(), pm.getMonth(), Math.min(Number(c.payDay) || 25, lastDay(pm.getFullYear(), pm.getMonth())));
+  return { from: fmtD(from), to: fmtD(to), pay };
+}
+function nightMinutes(s) { let n = 0; for (let k = 0; k < 3; k++) { const a = k * 1440 - 120, b = k * 1440 + 300; n += Math.max(0, Math.min(s.end, b) - Math.max(s.start, a)); } return n; }
+function calcPay(p, from, to) {
+  const c = company(); const pr = payOf(p.id);
+  const work = Object.values(S.shifts).filter(s => s.staffId === p.id && s.kind === 'work' && s.date >= from && s.date <= to);
+  let hrs = 0, night = 0, ot = 0; const days = new Set();
+  work.forEach(s => { const hh = hours(s); hrs += hh; days.add(s.date); night += Math.min(hh, nightMinutes(s) / 60); if (c.otDaily !== false && hh > 8) ot += hh - 8; });
+  const base = Math.floor(pr.wage * hrs), nightPay = Math.floor(pr.wage * night * (Number(c.nightRate) || 0) / 100), otPay = Math.floor(pr.wage * ot * (Number(c.otRate) || 0) / 100);
+  const transport = (pr.transport || 0) * days.size, allowance = pr.allowance || 0;
+  const adj = (S.months[payYm]?.adj || {})[p.id] || {}; const extra = Number(adj.extra) || 0, deduct = Number(adj.deduct) || 0;
+  const total = Math.max(0, base + nightPay + otPay + transport + allowance + extra - deduct);
+  const bank = pr.bank; const bankOk = !!(bank.bankCode && bank.branchCode && bank.number && bank.holder);
+  return { days: days.size, hrs, night, ot, base, nightPay, otPay, transport, allowance, extra, deduct, total, bank, bankOk, wage: pr.wage, note: adj.note || '' };
+}
+
+// ---------- rendering ----------
+const TABS = { week: '週', month: '月', day: '日', requests: '申請', payroll: '給与', summary: '集計', staff: 'スタッフ', settings: '設定', submit: '提出' };
+function tabList() { if (role === 'staff') return ['submit', 'week', 'month', 'day']; if (role === 'owner') return ['week', 'month', 'day', 'requests', 'payroll', 'summary', 'staff', 'settings']; return ['week', 'month', 'day', 'payroll', 'summary', 'staff', 'settings']; }
+function pendingList() { const out = []; Object.entries(S.requests).forEach(([u, r]) => { if (!S.staff[r.staffId]) return; Object.entries(r.items || {}).forEach(([id, it]) => { if (it.status === 'pending') out.push({ ...it, id, uidKey: u, staffId: r.staffId }); }); }); return out; }
+function unlinked() { return Object.entries(S.requests).filter(([u, r]) => r.staffId && S.staff[r.staffId] && S.staff[r.staffId].userId !== u); }
+function render() {
+  const st = settings();
+  $('#storeName').textContent = st.storeName || 'シフトボード';
+  document.title = st.storeName || 'シフトボード';
+  const tabs = tabList(); if (!tabs.includes(view)) view = tabs[0];
+  const pend = role === 'owner' ? pendingList().length + unlinked().length : 0;
+  $('#tabs').replaceChildren(...tabs.map(v => h('button', { dataset: { view: v }, 'aria-selected': String(v === view) }, TABS[v], v === 'requests' && pend ? h('span', { class: 'cnt' }, pend) : null)));
+  const r = visibleRange(); const lbl = $('#periodLabel');
+  if (view === 'week') lbl.textContent = `${dayLabel(r.from)} 〜 ${dayLabel(r.to)}`;
+  else if (view === 'day') { const d = parseD(r.from); lbl.textContent = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日(${WD[d.getDay()]})`; }
+  else lbl.textContent = `${cur.getFullYear()}年${cur.getMonth() + 1}月`;
+  $('#period').hidden = !['week', 'month', 'day', 'summary'].includes(view);
+  const w = canWrite();
+  $('#copyPrevBtn').hidden = view !== 'week' || !isAdmin(); $('#autoBtn').hidden = !(['week', 'month', 'day'].includes(view)) || !isAdmin();
+  $('#undoBtn').hidden = !isAdmin(); $('#redoBtn').hidden = !isAdmin(); $('#shareBtn').hidden = !['week', 'month', 'day', 'summary'].includes(view);
+  $('#autoBtn').disabled = !w; $('#copyPrevBtn').disabled = !w;
+  const badge = $('#syncBadge');
+  if (!S.ready) { badge.textContent = '読み込み中'; badge.className = 'tag'; }
+  else if (role === 'staff') { badge.textContent = '提出用'; badge.className = 'tag on'; }
+  else if (readOnly) { badge.textContent = '閲覧のみ'; badge.className = 'tag ro'; }
+  else if (backend === 'db') { badge.textContent = '共有保存'; badge.className = 'tag on'; }
+  else { badge.textContent = 'この端末に保存'; badge.className = 'tag'; }
+  const root = $('#view'); root.replaceChildren();
+  const fn = { week: renderWeek, month: renderMonth, day: renderDay, summary: renderSummary, staff: renderStaff, settings: renderSettings, requests: renderRequests, payroll: renderPayroll, submit: renderSubmit }[view];
+  root.append(...[].concat(fn()));
+  ensureShiftSub(); if (view === 'payroll') ensureMonthSub();
+}
+function emptyState() {
+  if (!S.ready) return h('div', { class: 'empty' }, h('h2', null, '読み込んでいます'), h('p', null, 'スタッフとシフトを取得しています。'));
+  if (!isAdmin()) return h('div', { class: 'empty' }, h('h2', null, 'まだスタッフが登録されていません'), h('p', null, '管理者がスタッフを登録すると、ここにシフトが表示されます。'));
+  return h('div', { class: 'empty' },
+    h('h2', null, 'スタッフがまだ登録されていません'),
+    h('p', null, 'まず「スタッフ」でメンバーを登録すると、週・月・日のボードにシフトを置けるようになります。サンプルを入れて動きを試すこともできます。'),
+    h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: () => openStaffDialog(null) }, '＋ スタッフを追加'), h('button', { class: 'btn', onclick: loadSample, disabled: !canWrite() }, 'サンプルデータを入れる')));
+}
+function dayHeadClass(ds) {
+  const d = parseD(ds); const c = ['day']; if (d.getDay() === 6) c.push('sat'); if (d.getDay() === 0) c.push('sun');
+  if (settings().showHolidays && HOLIDAYS[ds]) c.push('hol'); if (ds === todayStr()) c.push('today'); return c.join(' ');
+}
+const isWk = ds => { const d = parseD(ds).getDay(); return d === 0 || d === 6 || (settings().showHolidays && !!HOLIDAYS[ds]); };
+function chip(s, an) {
+  const w = an.shift[s.id]; const editable = canWrite();
+  const c = h('div', { class: 'chip' + (s.kind === 'off' ? ' off' : '') + (s.kind === 'work' && !tplOf(s.tpl) ? ' custom' : ''), style: `--c:${chipColor(s)}`, draggable: editable ? 'true' : null, title: (w ? w.join(' / ') : '') + (s.note ? (w ? ' / ' : '') + s.note : ''), dataset: { id: s.id }, onclick: e => { e.stopPropagation(); if (isAdmin()) openShiftDialog({ id: s.id }); } },
+    chipName(s), s.kind === 'work' ? h('span', { class: 't' }, `${mmToStr(s.start)}–${mmToStr(s.end)}`) : null, w ? h('span', { class: 'w' }, '!') : null);
+  if (editable) c.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', s.id); e.dataTransfer.effectAllowed = 'copyMove'; });
+  return c;
+}
+function reqChip(it) { return h('div', { class: 'chip req', title: '申請中：クリックで申請タブへ', onclick: e => { e.stopPropagation(); view = 'requests'; render(); } }, it.kind === 'off' ? '休み希望' : '出勤希望', it.kind === 'work' ? h('span', { class: 't' }, `${mmToStr(it.start)}–${mmToStr(it.end)}`) : null); }
+function dropTarget(td, date, staffId) {
+  if (!canWrite()) return;
+  td.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = (e.ctrlKey || e.altKey) ? 'copy' : 'move'; td.classList.add('dragover'); });
+  td.addEventListener('dragleave', () => td.classList.remove('dragover'));
+  td.addEventListener('drop', e => {
+    e.preventDefault(); td.classList.remove('dragover'); const id = e.dataTransfer.getData('text/plain'); const s = S.shifts[id]; if (!s) return;
+    const tgt = { ...s, date, staffId: staffId || s.staffId };
+    if (tgt.date === s.date && tgt.staffId === s.staffId) return;
+    if (e.ctrlKey || e.altKey) { tgt.id = uid('sh'); commit('シフトを複製', [{ id: tgt.id, before: null, after: tgt }]); }
+    else commit('シフトを移動', [{ id, before: s, after: tgt }]);
+  });
+}
+function renderWeek() {
+  const staff = staffList(); if (!staff.length) return emptyState();
+  const st = settings(); const r = visibleRange(); const an = analyze(r.from, r.to);
+  const days = []; for (let d = parseD(r.from); fmtD(d) <= r.to; d = addD(d, 1)) days.push(fmtD(d));
+  const byCell = {}; Object.values(S.shifts).forEach(s => { if (s.date >= r.from && s.date <= r.to) (byCell[s.staffId + '|' + s.date] || (byCell[s.staffId + '|' + s.date] = [])).push(s); });
+  const pendByCell = {}; if (role === 'owner') pendingList().forEach(it => { (pendByCell[it.staffId + '|' + it.date] || (pendByCell[it.staffId + '|' + it.date] = [])).push(it); });
+  const thead = h('thead', null,
+    h('tr', null, h('th', { class: 'corner' }, h('div', { style: 'padding:8px 10px;font-weight:500;color:var(--muted)' }, 'スタッフ')),
+      days.map(ds => h('th', { class: dayHeadClass(ds), onclick: () => { cur = parseD(ds); view = 'day'; render(); }, style: 'cursor:pointer' }, h('div', { class: 'dnum' }, parseD(ds).getDate()), h('div', { class: 'dwd' }, (parseD(ds).getDate() === 1 || ds === r.from ? (parseD(ds).getMonth() + 1) + '月 ' : '') + WD[parseD(ds).getDay()]), HOLIDAYS[ds] && st.showHolidays ? h('div', { class: 'hol' }, HOLIDAYS[ds]) : null)),
+      h('th', { style: 'padding:8px 10px;text-align:right;color:var(--muted);font-weight:500;min-width:90px' }, '週計')),
+    h('tr', { class: 'need' }, h('th', { class: 'corner' }, '必要人数'),
+      days.map(ds => h('td', null, st.templates.map(t => { const u = an.under[ds][t.id]; return h('span', { class: 'needchip ' + (u.need === 0 ? 'dim' : u.have < u.need ? 'bad' : 'ok'), style: `--c:${t.color}` }, h('i'), `${t.name.slice(0, 1)} ${u.have}/${u.need}`); }))), h('td')));
+  const rows = staff.map(p => {
+    const wk = an.staffWeek[p.id]?.[r.from] || 0; const over = p.maxHours > 0 && wk > p.maxHours + 1e-9;
+    return h('tr', null,
+      h('th', { class: 'who', style: `--c:${p.color}` }, h('div', { class: 'nm' }, h('span', { class: 'dot' }), p.name), p.role ? h('small', null, p.role) : null),
+      days.map(ds => { const wd = parseD(ds).getDay(); const td = h('td', { class: 'cell' + (ds === todayStr() ? ' today-col' : isWk(ds) ? ' wk' : '') + (p.avail && p.avail[wd] === false ? ' unavail' : ''), onclick: () => { if (isAdmin()) openShiftDialog({ date: ds, staffId: p.id }); } }, (byCell[p.id + '|' + ds] || []).sort((a, b) => a.start - b.start).map(s => chip(s, an)), (pendByCell[p.id + '|' + ds] || []).map(reqChip)); dropTarget(td, ds, p.id); return td; }),
+      h('td', { class: 'sum' + (over ? ' over' : '') }, fmtH(wk) + 'h', p.maxHours > 0 ? h('small', null, ` /${p.maxHours}`) : null));
+  });
+  const totals = h('tr', { class: 'total' }, h('th', { class: 'who' }, '出勤人数'), days.map(ds => { const n = new Set(Object.values(S.shifts).filter(s => s.date === ds && s.kind === 'work' && S.staff[s.staffId]).map(s => s.staffId)).size; const hrs = Object.values(S.shifts).filter(s => s.date === ds && S.staff[s.staffId]).reduce((a, s) => a + hours(s), 0); return h('td', null, h('b', null, n), ' 人 · ', h('span', { class: 'num' }, fmtH(hrs)), 'h'); }), h('td'));
+  const table = h('table', { class: 'board week' }, thead, h('tbody', null, rows, totals));
+  const hint = isAdmin() ? h('p', { class: 'hint' }, 'セルをクリックで追加、チップをクリックで編集。ドラッグで移動、', h('kbd', null, 'Ctrl'), '+ドラッグで複製。斜線は出勤できない曜日。点線は申請中の希望。') : h('p', { class: 'hint' }, '確定したシフトです。希望の提出は「提出」タブから。');
+  return [h('div', { class: 'sheet-wrap' }, table), hint];
+}
+function renderMonth() {
+  const staff = staffList(); if (!staff.length) return emptyState();
+  const st = settings(); const r = visibleRange(); const an = analyze(r.from, r.to);
+  const first = parseD(r.from); const gridStart = startOfWeek(first, st.weekStart);
+  const cells = []; const order = []; for (let i = 0; i < 7; i++) order.push((st.weekStart + i) % 7);
+  order.forEach(wd => cells.push(h('div', { class: 'mh' + (wd === 6 ? ' sat' : wd === 0 ? ' sun' : '') }, WD[wd])));
+  for (let d = gridStart, i = 0; i < 42; d = addD(d, 1), i++) {
+    const ds = fmtD(d); const inMonth = d.getMonth() === cur.getMonth(); if (i >= 35 && !inMonth && d.getDate() <= 7 && d.getDay() === st.weekStart) break;
+    const list = Object.values(S.shifts).filter(s => s.date === ds && S.staff[s.staffId]).sort((a, b) => (a.kind === 'off') - (b.kind === 'off') || a.start - b.start);
+    const under = inMonth && Object.values(an.under[ds] || {}).some(u => u.have < u.need);
+    const n = new Set(list.filter(s => s.kind === 'work').map(s => s.staffId)).size;
+    const c = ['mday']; if (!inMonth) c.push('out'); if (ds === todayStr()) c.push('today'); else if (isWk(ds)) c.push('wk'); if (d.getDay() === 6) c.push('sat'); if (d.getDay() === 0) c.push('sun'); if (st.showHolidays && HOLIDAYS[ds]) c.push('hol');
+    const td = h('div', { class: c.join(' '), onclick: () => { cur = parseD(ds); view = 'day'; render(); } },
+      h('div', { class: 'dh' }, h('b', null, d.getDate()), st.showHolidays && HOLIDAYS[ds] ? h('small', null, HOLIDAYS[ds]) : null, h('span', { class: 'cnt' + (under ? ' bad' : '') }, n ? `${n}人${under ? ' 不足' : ''}` : (under ? '不足' : ''))),
+      list.slice(0, 6).map(s => h('div', { class: 'mchip' + (s.kind === 'off' ? ' off' : ''), style: `--c:${chipColor(s)}`, title: `${S.staff[s.staffId].name} ${chipName(s)}` }, S.staff[s.staffId].name.split(/\s+/)[0], ' ', h('span', { class: 't' }, s.kind === 'work' ? mmToStr(s.start) : '休'))),
+      list.length > 6 ? h('div', { class: 'mmore' }, `他 ${list.length - 6} 件`) : null);
+    dropTarget(td, ds, null); cells.push(td);
+  }
+  return [h('div', { class: 'month' }, cells), h('p', { class: 'hint' }, '日付をクリックすると、その日のタイムラインを開きます。人数は出勤人数、「不足」は必要人数に届いていない日です。')];
+}
+function renderDay() {
+  const staff = staffList(); if (!staff.length) return emptyState();
+  const st = settings(); const ds = fmtD(cur); const an = analyze(ds, ds);
+  const list = Object.values(S.shifts).filter(s => s.date === ds && S.staff[s.staffId]);
+  let lo = 6 * 60, hi = 24 * 60; st.templates.forEach(t => { lo = Math.min(lo, t.start); hi = Math.max(hi, t.end); }); list.filter(s => s.kind === 'work').forEach(s => { lo = Math.min(lo, s.start); hi = Math.max(hi, s.end); });
+  lo = Math.floor(lo / 60) * 60; hi = Math.min(Math.ceil(hi / 60) * 60, 48 * 60); const n = (hi - lo) / 60; const pct = m => ((m - lo) / (hi - lo) * 100);
+  const head = h('div', { class: 'tl-row head' }, h('div', { class: 'tl-who', style: 'color:var(--muted);font-weight:500' }, 'スタッフ'), h('div', { class: 'tl-hours', style: `--n:${n}` }, Array.from({ length: n }, (_, i) => h('span', null, mmToStr(lo + i * 60).replace(':00', '')))));
+  const rows = staff.map(p => {
+    const mine = list.filter(s => s.staffId === p.id);
+    const track = h('div', { class: 'tl-track', style: `--n:${n}`, onclick: e => { if (!isAdmin()) return; const rect = track.getBoundingClientRect(); const m = lo + Math.round(((e.clientX - rect.left) / rect.width) * (hi - lo) / 30) * 30; openShiftDialog({ date: ds, staffId: p.id, start: m }); } },
+      mine.map(s => { const w = an.shift[s.id]; const a = s.kind === 'work' ? s.start : lo, b = s.kind === 'work' ? s.end : hi; return h('div', { class: 'tl-bar' + (s.kind === 'off' ? ' off' : ''), style: `--c:${chipColor(s)};left:${pct(a)}%;width:${Math.max(2, pct(b) - pct(a))}%`, title: w ? w.join(' / ') : '', onclick: e => { e.stopPropagation(); if (isAdmin()) openShiftDialog({ id: s.id }); } }, chipName(s), s.kind === 'work' ? h('span', { class: 't' }, `${mmToStr(s.start)}–${mmToStr(s.end)} · ${fmtH(hours(s))}h`) : null, w ? h('span', { class: 'w' }, '!') : null); }));
+    dropTarget(track, ds, p.id);
+    return h('div', { class: 'tl-row' }, h('div', { class: 'tl-who', style: `--c:${p.color}` }, h('span', { class: 'dot' }), p.name), track);
+  });
+  const cov = Array.from({ length: n }, (_, i) => { const a = lo + i * 60, b = a + 60; return list.filter(s => s.kind === 'work' && s.start < b && s.end > a).length; });
+  const maxc = Math.max(1, ...cov);
+  const covRow = h('div', { class: 'tl-row' }, h('div', { class: 'tl-who', style: 'color:var(--muted);font-weight:500' }, '時間帯の人数'), h('div', { class: 'tl-cov', style: `--n:${n}` }, cov.map(c => h('div', { class: c === 0 ? 'zero' : '' }, c, h('i', { style: `height:${Math.max(3, c / maxc * 36)}px` })))));
+  const needLine = h('div', { class: 'row' }, st.templates.map(t => { const u = an.under[ds][t.id]; return h('span', { class: 'needchip ' + (u.need === 0 ? 'dim' : u.have < u.need ? 'bad' : 'ok'), style: `--c:${t.color};font-size:12px;padding:3px 8px` }, h('i'), `${t.name} ${mmToStr(t.start)}–${mmToStr(t.end)}  ${u.have}/${u.need}人`); }), st.showHolidays && HOLIDAYS[ds] ? h('span', { class: 'tag', style: 'color:var(--sun);border-color:var(--sun)' }, HOLIDAYS[ds]) : null);
+  return [needLine, h('div', { class: 'tl' }, h('div', { class: 'tl-grid' }, head, rows, covRow)), isAdmin() ? h('p', { class: 'hint' }, '行の空いている場所をクリックすると、その時刻から始まるシフトを追加できます。') : null];
+}
+function renderSummary() {
+  const staff = staffList(); if (!staff.length) return emptyState();
+  const st = settings(); const r = visibleRange(); const an = analyze(r.from, r.to);
+  const inR = Object.values(S.shifts).filter(s => s.date >= r.from && s.date <= r.to && S.staff[s.staffId]);
+  let totH = 0, totCost = 0, totDays = 0;
+  const rows = staff.map(p => {
+    const mine = inR.filter(s => s.staffId === p.id); const work = mine.filter(s => s.kind === 'work'); const hrs = work.reduce((a, s) => a + hours(s), 0); const days = new Set(work.map(s => s.date)).size; const wage = payOf(p.id).wage; const cost = hrs * wage; const warns = mine.reduce((a, s) => a + (an.shift[s.id]?.length || 0), 0);
+    totH += hrs; totCost += cost; totDays += days;
+    const byTpl = st.templates.map(t => work.filter(s => s.tpl === t.id).length);
+    return h('tr', null, h('td', null, h('span', { style: `display:inline-block;width:9px;height:9px;border-radius:1px;background:${p.color};margin-right:6px` }), p.name), h('td', { class: 'r' }, days), byTpl.map(c => h('td', { class: 'r' }, c)), h('td', { class: 'r' }, fmtH(hrs)), h('td', { class: 'r' }, wage ? yen(cost) : '—'), h('td', { class: 'r' }, mine.filter(s => s.kind === 'off').length), h('td', { class: 'r', style: warns ? 'color:var(--warn);font-weight:700' : '' }, warns || ''));
+  });
+  const underList = []; Object.entries(an.under).forEach(([ds, u]) => st.templates.forEach(t => { const x = u[t.id]; if (x.have < x.need) underList.push(h('div', { class: 'under' }, `${dayLabel(ds)} ${t.name}：${x.have}/${x.need}人（${x.need - x.have}人不足）`)); }));
+  const warnList = []; inR.sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start).forEach(s => (an.shift[s.id] || []).forEach(m => warnList.push(h('div', { onclick: () => openShiftDialog({ id: s.id }), style: 'cursor:pointer' }, `${dayLabel(s.date)} ${S.staff[s.staffId].name} ${chipName(s)}：${m}`))));
+  const understaffDays = Object.values(an.under).filter(u => Object.values(u).some(x => x.have < x.need)).length;
+  const item = (k, v, unit, bad) => h('div', { class: bad ? 'bad' : '' }, h('span', { class: 'k' }, k), h('span', { class: 'v' }, v, unit ? h('small', null, ' ' + unit) : null));
+  return [
+    h('div', { class: 'sumline' }, item('総労働時間', fmtH(totH), 'h'), item('概算人件費', yen(totCost)), item('延べ出勤', totDays, '人日'), item('人数不足の日', understaffDays, '日', understaffDays > 0), item('警告', warnList.length, '件', warnList.length > 0)),
+    h('div', { class: 'panel' }, h('h2', null, `スタッフ別集計`, h('span', { class: 'sub' }, `${cur.getFullYear()}年${cur.getMonth() + 1}月 · 人件費は時給×実働の概算。割増・交通費を含む支給額は「給与」で`)), h('div', { style: 'overflow-x:auto' }, h('table', { class: 'list' }, h('thead', null, h('tr', null, h('th', null, 'スタッフ'), h('th', { class: 'r' }, '出勤日'), st.templates.map(t => h('th', { class: 'r' }, t.name)), h('th', { class: 'r' }, '実働 h'), h('th', { class: 'r' }, '人件費'), h('th', { class: 'r' }, '希望休'), h('th', { class: 'r' }, '警告'))), h('tbody', null, rows, h('tr', { class: 'tot' }, h('td', null, '合計'), h('td', { class: 'r' }, totDays), st.templates.map(t => h('td', { class: 'r' }, inR.filter(s => s.kind === 'work' && s.tpl === t.id).length)), h('td', { class: 'r' }, fmtH(totH)), h('td', { class: 'r' }, yen(totCost)), h('td', { class: 'r' }, inR.filter(s => s.kind === 'off').length), h('td')))))),
+    h('div', { class: 'grid2' },
+      h('div', { class: 'panel' }, h('h2', null, '人数不足'), underList.length ? h('div', { class: 'warnlist' }, underList) : h('p', { class: 'hint' }, 'この月に不足している枠はありません。')),
+      h('div', { class: 'panel' }, h('h2', null, 'ルール違反の警告'), warnList.length ? h('div', { class: 'warnlist' }, warnList) : h('p', { class: 'hint' }, `重複・休息 ${st.minRest}h 未満・週上限超過・${st.maxConsecutive + 1}連勤以上・希望休との衝突はありません。`)))
+  ];
+}
+function renderStaff() {
+  const staff = staffList(); const w = canWrite();
+  const cards = staff.map((p, i) => { const pr = payOf(p.id); return h('div', { class: 'scard', style: `--c:${p.color}` },
+    h('div', { class: 'nm' }, p.name, p.role ? h('small', null, p.role) : null, h('span', { style: 'margin-left:auto;display:flex;gap:4px' }, h('button', { class: 'btn sm', onclick: () => moveStaff(i, -1), disabled: i === 0 || !w, 'aria-label': '上へ' }, '↑'), h('button', { class: 'btn sm', onclick: () => moveStaff(i, 1), disabled: i === staff.length - 1 || !w, 'aria-label': '下へ' }, '↓'), h('button', { class: 'btn sm', onclick: () => openStaffDialog(p.id) }, '編集'))),
+    h('div', { class: 'meta' }, h('span', null, pr.wage ? `時給 ${yen(pr.wage)}` : '時給 未設定'), h('span', null, p.maxHours > 0 ? `週 ${p.maxHours}h まで` : '週上限なし'), h('span', { class: pr.bank.number ? '' : 'acct none' }, pr.bank.number ? '口座 登録済' : '口座 未登録'), role === 'owner' ? h('span', null, p.userId ? 'アカウント連携済' : '未連携') : null),
+    h('div', { class: 'wd' }, [1, 2, 3, 4, 5, 6, 0].map(wd => h('span', { class: (!p.avail || p.avail[wd] !== false) ? 'on' : '' }, WD[wd]))),
+    p.memo ? h('div', { class: 'hint' }, p.memo) : null); });
+  return [h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: () => openStaffDialog(null), disabled: !w }, '＋ スタッフを追加'), h('span', { class: 'hint' }, `${staff.length} 人。出勤できる曜日が色付きです。並び順はボードの行順になります。時給と口座は管理者だけが見られます。`)),
+  staff.length ? h('div', { class: 'staff-list' }, cards) : emptyState()];
+}
+function moveStaff(i, dir) { const list = staffList(); const j = i + dir; if (j < 0 || j >= list.length) return; list.forEach((p, k) => p.order = k); const a = list[i], b = list[j]; const t = a.order; a.order = b.order; b.order = t; saveStaff({ ...a }); saveStaff({ ...b }); }
+function renderSettings() {
+  const st = JSON.parse(JSON.stringify(settings()));
+  const order = []; for (let i = 0; i < 7; i++) order.push((st.weekStart + i) % 7);
+  const f = (id, label, input) => h('div', { class: 'field' }, h('label', { for: id }, label), input);
+  const tplBox = h('div', { style: 'display:flex;flex-direction:column;gap:6px' });
+  const reqBox = h('div', { style: 'overflow-x:auto' });
+  const drawTpl = () => {
+    fill(tplBox, h('div', { class: 'tplrow tplhead' }, h('span', null, '色'), h('span', null, '名前'), h('span', null, '開始'), h('span', null, '終了'), h('span', null, '休憩(分)'), h('span')),
+      st.templates.map((t, i) => h('div', { class: 'tplrow' },
+        h('input', { type: 'color', id: 'tc' + i, value: t.color, oninput: e => { t.color = e.target.value; } }),
+        h('input', { type: 'text', id: 'tn' + i, value: t.name, oninput: e => { t.name = e.target.value; } }),
+        h('input', { type: 'time', id: 'ts' + i, value: toTimeVal(t.start), onchange: e => { t.start = strToMm(e.target.value); } }),
+        h('input', { type: 'time', id: 'te' + i, value: toTimeVal(t.end), onchange: e => { t.end = strToMm(e.target.value); } }),
+        h('input', { type: 'number', id: 'tb' + i, min: 0, step: 5, value: t.brk, onchange: e => { t.brk = Number(e.target.value) || 0; } }),
+        h('button', { class: 'btn sm danger', 'aria-label': '削除', onclick: () => { st.templates.splice(i, 1); drawTpl(); drawReq(); } }, '×'))),
+      h('div', null, h('button', { class: 'btn sm', onclick: () => { st.templates.push({ id: uid('t'), name: '新しい区分', start: 540, end: 1080, brk: 60, color: PALETTE[st.templates.length % PALETTE.length] }); drawTpl(); drawReq(); } }, '＋ 区分を追加')));
+  };
+  const drawReq = () => {
+    fill(reqBox, h('table', { class: 'req' }, h('thead', null, h('tr', null, h('th', null, '区分'), order.map(wd => h('th', { class: wd === 6 ? 'sat' : wd === 0 ? 'sun' : '' }, WD[wd])))),
+      h('tbody', null, st.templates.map(t => h('tr', null, h('th', { style: 'text-align:left' }, h('span', { style: `display:inline-block;width:9px;height:9px;border-radius:1px;background:${t.color};margin-right:5px` }), t.name), order.map(wd => h('td', null, h('input', { type: 'number', min: 0, max: 99, id: `rq_${t.id}_${wd}`, value: st.required[wd]?.[t.id] ?? 0, onchange: e => { (st.required[wd] || (st.required[wd] = {}))[t.id] = Number(e.target.value) || 0; } }))))))));
+  };
+  drawTpl(); drawReq();
+  const save = () => {
+    for (const t of st.templates) { t.name = (t.name || '').trim() || '区分'; if (t.end <= t.start) t.end += 1440; if (t.end >= 2880) t.end -= 1440; }
+    st.storeName = ($('#setName').value || '').trim() || 'シフトボード'; st.weekStart = Number($('#setWs').value); st.minRest = Number($('#setRest').value) || 0; st.maxConsecutive = Number($('#setConsec').value) || 99; st.showHolidays = $('#setHol').checked;
+    st.reqDeadlineDay = Math.max(0, Math.min(31, Number($('#setDl').value) || 0)); st.reqHorizonMonths = Number($('#setHz').value) || 1; st.reqNotice = ($('#setNotice').value || '').trim();
+    saveSettings(st); toast('設定を保存しました', 'ok');
+  };
+  return [
+    h('div', { class: 'panel' }, h('h2', null, '基本設定'), h('div', { class: 'grid2' },
+      f('setName', '店舗・チーム名', h('input', { id: 'setName', type: 'text', value: st.storeName })),
+      f('setWs', '週の始まり', h('select', { id: 'setWs' }, [1, 0, 6].map(wd => h('option', { value: wd, selected: st.weekStart === wd }, WD[wd] + '曜日')))),
+      f('setRest', '勤務間の最低休息（時間）', h('input', { id: 'setRest', type: 'number', min: 0, max: 24, value: st.minRest })),
+      f('setConsec', '連勤の上限（日）', h('input', { id: 'setConsec', type: 'number', min: 1, max: 31, value: st.maxConsecutive })),
+      h('div', { class: 'field' }, h('label', null, '祝日'), h('label', { class: 'chk' }, h('input', { type: 'checkbox', id: 'setHol', checked: st.showHolidays }), '日本の祝日を表示する')))),
+    h('div', { class: 'panel' }, h('h2', null, 'シフト区分'), h('p', { class: 'hint', style: 'margin:0 0 8px' }, '早番・遅番などの型。終了が開始より早い場合は翌日扱いになります。'), tplBox),
+    h('div', { class: 'panel' }, h('h2', null, '曜日ごとの必要人数'), h('p', { class: 'hint', style: 'margin:0 0 8px' }, '自動割当と「不足」判定の基準になります。'), reqBox),
+    h('div', { class: 'panel' }, h('h2', null, '希望の受付', h('span', { class: 'sub' }, 'スタッフが「提出」タブで送る希望休・出勤希望の決まり')), h('div', { class: 'grid2' },
+      f('setDl', '締切（毎月◯日まで・0 で締切なし）', h('input', { id: 'setDl', type: 'number', min: 0, max: 31, value: st.reqDeadlineDay ?? 20 })),
+      f('setHz', '受け付ける範囲', h('select', { id: 'setHz' }, [[1, '翌月分まで'], [2, '翌々月分まで'], [3, '3か月先まで']].map(([v, l]) => h('option', { value: v, selected: (st.reqHorizonMonths || 1) === v }, l)))),
+      f('setNotice', 'スタッフへの案内文', h('input', { id: 'setNotice', type: 'text', value: st.reqNotice || '', placeholder: '例：土日はどちらか出てもらえると助かります' }))),
+      h('p', { class: 'hint', style: 'margin:10px 0 0' }, 'スタッフにはこのページを「編集者」として招待してください（右上の共有メニュー）。招待された人が開くと「提出」画面になり、自分の希望だけを送れます。時給・口座・給与は管理者にしか見えません。')),
+    h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: save, disabled: !canWrite() }, '設定を保存'), h('span', { class: 'hint' }, backend === 'db' ? 'このリンクを開く全員に反映されます。' : 'この端末に保存されます。'))
+  ];
+}
+
+// ---------- requests (owner) ----------
+function renderRequests() {
+  const staff = staffList(); if (!staff.length) return emptyState();
+  const out = [];
+  const ul = unlinked();
+  if (ul.length) out.push(h('div', { class: 'reqgroup' }, h('div', { class: 'gh' }, '本人確認', h('span', { class: 'hint' }, 'スタッフが自分の名前を選んで提出を始めました。本人で間違いなければ承認してください。')),
+    ul.map(([u, r]) => { const p = S.staff[r.staffId]; const other = p.userId && p.userId !== u; return h('div', { class: 'reqrow' }, h('div', { class: 'who', style: `--c:${p.color}` }, h('span', { class: 'dot' }), p.name), h('div', { class: 'what' }, h('span', null, 'アカウント：', h('b', null, names[u] || '（名前を取得できません）')), other ? h('span', { class: 'kind conf' }, 'この名前は別のアカウントと連携済み') : null), h('div', { class: 'row' }, h('button', { class: 'btn primary sm', onclick: () => { saveStaff({ ...p, userId: u }); toast(`${p.name} さんのアカウントを承認しました`, 'ok'); } }, other ? '置き換えて承認' : '承認'), h('button', { class: 'btn sm danger', onclick: async () => { if (await confirmBox('申請を削除', `${p.name} としての申請データを削除します。`, '削除する')) { try { await db.doc('requests/' + u).delete(); } catch (e) { console.error(e); } } } }, '却下'))); })));
+  const pend = pendingList().sort((a, b) => a.date.localeCompare(b.date) || a.at - b.at);
+  const conflictOf = it => Object.values(S.shifts).find(s => s.staffId === it.staffId && s.date === it.date);
+  const head = h('div', { class: 'row' }, h('h2', { style: 'font-family:var(--display);font-size:18px' }, '申請中', h('span', { class: 'num', style: 'font-size:14px;color:var(--muted);margin-left:8px' }, `${pend.length} 件`)), h('span', { style: 'margin-left:auto' }), pend.length ? h('button', { class: 'btn primary', disabled: !canWrite(), onclick: () => approveAll(pend.filter(it => !conflictOf(it))) }, `衝突のないもの ${pend.filter(it => !conflictOf(it)).length} 件を承認`) : null);
+  out.push(head);
+  if (!pend.length) out.push(h('div', { class: 'empty' }, h('h2', null, '新しい申請はありません'), h('p', null, 'スタッフが「提出」から送った希望休・出勤希望がここに並びます。承認するとそのままシフトになります。')));
+  else {
+    const byDate = {}; pend.forEach(it => (byDate[it.date] || (byDate[it.date] = [])).push(it));
+    Object.keys(byDate).sort().forEach(ds => out.push(h('div', { class: 'reqgroup' }, h('div', { class: 'gh' }, h('span', { class: 'num' }, dayLabel(ds)), HOLIDAYS[ds] && settings().showHolidays ? h('span', { style: 'color:var(--sun);font-size:12px' }, HOLIDAYS[ds]) : null, h('span', { class: 'hint' }, `${byDate[ds].length} 件`)),
+      byDate[ds].map(it => { const p = S.staff[it.staffId]; const c = conflictOf(it); const t = tplOf(it.tpl); return h('div', { class: 'reqrow' },
+        h('div', { class: 'who', style: `--c:${p.color}` }, h('span', { class: 'dot' }), p.name),
+        h('div', { class: 'what' }, it.kind === 'off' ? h('span', { class: 'kind off' }, '休み希望') : h('span', { class: 'kind work', style: `--c:${t?.color || 'var(--ink2)'}` }, t ? t.name : '出勤希望', h('span', { class: 'num' }, `${mmToStr(it.start)}–${mmToStr(it.end)}`)), it.note ? h('span', { class: 'note' }, it.note) : null, c ? h('span', { class: 'kind conf', title: 'この日にはすでにシフトがあります' }, `すでに ${chipName(c)}${c.kind === 'work' ? ' ' + mmToStr(c.start) + '–' + mmToStr(c.end) : ''}`) : null),
+        h('div', { class: 'row' }, h('button', { class: 'btn primary sm', disabled: !canWrite(), onclick: () => approveReq(it, c) }, c ? '置き換えて承認' : '承認'), h('button', { class: 'btn sm', disabled: !canWrite(), onclick: () => rejectReq(it) }, '見送る'))); }))));
+  }
+  const hist = []; Object.entries(S.requests).forEach(([u, r]) => { if (!S.staff[r.staffId]) return; Object.entries(r.items || {}).forEach(([id, it]) => { if (it.status !== 'pending') hist.push({ ...it, id, uidKey: u, staffId: r.staffId }); }); });
+  hist.sort((a, b) => (b.decidedAt || 0) - (a.decidedAt || 0));
+  if (hist.length) out.push(h('details', { class: 'fold' }, h('summary', null, `処理済み ${hist.length} 件`), h('div', { class: 'body' }, h('div', { style: 'overflow-x:auto' }, h('table', { class: 'list' }, h('thead', null, h('tr', null, h('th', null, '日付'), h('th', null, 'スタッフ'), h('th', null, '内容'), h('th', null, '結果'), h('th'))), h('tbody', null, hist.slice(0, 100).map(it => { const p = S.staff[it.staffId]; return h('tr', null, h('td', { class: 'num' }, dayLabel(it.date)), h('td', null, p.name), h('td', null, it.kind === 'off' ? '休み希望' : `出勤希望 ${mmToStr(it.start)}–${mmToStr(it.end)}`, it.note ? h('span', { class: 'hint' }, '　' + it.note) : null), h('td', null, h('span', { class: 'st ' + it.status }, it.status === 'approved' ? '承認' : '見送り')), h('td', null, h('button', { class: 'btn sm ghost', disabled: !canWrite(), onclick: () => updateReq(it.uidKey, { items: { [it.id]: { status: 'pending', decidedAt: 0 } } }) }, '申請中に戻す'))); })))),
+    h('p', { class: 'hint' }, '古い処理済みはスタッフの画面からも消えます。', h('button', { class: 'btn sm', style: 'margin-left:8px', disabled: !canWrite(), onclick: purgeOld }, '60日より前の処理済みを消す')))));
+  return out;
+}
+async function approveReq(it, conflict) {
+  if (!canWrite()) return;
+  const ops = [];
+  if (conflict) ops.push({ id: conflict.id, before: conflict, after: null });
+  const id = uid('sh'); const sh = it.kind === 'off' ? { id, date: it.date, staffId: it.staffId, kind: 'off', start: 0, end: 0, brk: 0, tpl: '', note: it.note || '' } : { id, date: it.date, staffId: it.staffId, kind: 'work', start: it.start, end: it.end, brk: it.brk || 0, tpl: it.tpl || '', note: it.note || '' };
+  ops.push({ id, before: null, after: sh });
+  commit('申請を承認', ops);
+  await updateReq(it.uidKey, { items: { [it.id]: { status: 'approved', shiftId: id, decidedAt: Date.now() } } });
+}
+async function approveAll(list) { if (!list.length) return; if (!await confirmBox('まとめて承認', `${list.length} 件の申請をシフトに反映します。すでにシフトがある日のものは含まれません。`, '承認する')) return; for (const it of list) await approveReq(it, null); toast(`${list.length} 件を承認しました`, 'ok'); }
+async function rejectReq(it) { await updateReq(it.uidKey, { items: { [it.id]: { status: 'rejected', decidedAt: Date.now() } } }); }
+async function purgeOld() {
+  const cutoff = Date.now() - 60 * 86400000; let n = 0;
+  for (const [u, r] of Object.entries(S.requests)) { const items = {}; let changed = false; Object.entries(r.items || {}).forEach(([id, it]) => { if (it.status !== 'pending' && (it.decidedAt || 0) < cutoff) { changed = true; n++; } else items[id] = it; }); if (changed) { try { await db.doc('requests/' + u).set({ ...r, items }); } catch (e) { console.error(e); } } }
+  toast(n ? `${n} 件を消しました` : '消すものはありません');
+}
+
+// ---------- payroll (owner) ----------
+function renderPayroll() {
+  const staff = staffList(); if (!staff.length) return emptyState();
+  const c = company(); const per = payPeriod(payYm); const mon = S.months[payYm] || {}; const w = canWrite();
+  const f = (id, label, input) => h('div', { class: 'field' }, h('label', { for: id }, label), input);
+  const rows = staff.map(p => ({ p, r: calcPay(p, per.from, per.to) }));
+  const tot = rows.reduce((a, x) => a + x.r.total, 0); const ready = rows.filter(x => x.r.total > 0 && x.r.bankOk); const noBank = rows.filter(x => x.r.total > 0 && !x.r.bankOk);
+  const [py, pm] = payYm.split('-').map(Number);
+  const pickYm = h('input', { type: 'month', id: 'payYm', class: 'num', value: payYm, onchange: e => { if (e.target.value) { payYm = e.target.value; render(); } } });
+  const head = h('div', { class: 'payhead' },
+    h('button', { class: 'btn icon', 'aria-label': '前の月', onclick: () => { payYm = ymOf(new Date(py, pm - 2, 1)); render(); } }, '‹'), h('div', { class: 'field', style: 'width:150px' }, pickYm), h('button', { class: 'btn icon', 'aria-label': '次の月', onclick: () => { payYm = ymOf(new Date(py, pm, 1)); render(); } }, '›'),
+    h('span', { class: 'per' }, `${dayLabel(per.from)} 〜 ${dayLabel(per.to)} 締め　支払日 ${per.pay.getMonth() + 1}/${per.pay.getDate()}`),
+    mon.paidAt ? h('span', { class: 'paid' }, `支払済み ${new Date(mon.paidAt).toLocaleDateString('ja-JP')}`) : null);
+  const adjIn = (p, key, val) => { let t = null; return h('input', { type: 'number', class: 'cellin', id: `adj_${key}_${p.id}`, value: val || '', step: 1, min: 0, placeholder: '0', disabled: !w || !!mon.paidAt, onchange: e => { const m = JSON.parse(JSON.stringify(S.months[payYm] || {})); m.adj = m.adj || {}; m.adj[p.id] = { ...(m.adj[p.id] || {}), [key]: Number(e.target.value) || 0 }; saveMonth(payYm, m).then(() => render()); } }); };
+  const table = h('div', { style: 'overflow-x:auto' }, h('table', { class: 'list' },
+    h('thead', null, h('tr', null, h('th', null, 'スタッフ'), h('th', { class: 'r' }, '出勤'), h('th', { class: 'r' }, '実働 h'), h('th', { class: 'r' }, '深夜 h'), h('th', { class: 'r' }, '残業 h'), h('th', { class: 'r' }, '時給'), h('th', { class: 'r' }, '基本'), h('th', { class: 'r' }, '割増'), h('th', { class: 'r' }, '交通費'), h('th', { class: 'r' }, '手当'), h('th', { class: 'r' }, '加算'), h('th', { class: 'r' }, '控除'), h('th', { class: 'r' }, '支給額'), h('th', null, '振込先'))),
+    h('tbody', null, rows.map(({ p, r }) => h('tr', null,
+      h('td', null, h('span', { style: `display:inline-block;width:9px;height:9px;border-radius:1px;background:${p.color};margin-right:6px` }), h('a', { href: '#', style: 'color:inherit', onclick: e => { e.preventDefault(); openStaffDialog(p.id, true); } }, p.name)),
+      h('td', { class: 'r' }, r.days), h('td', { class: 'r' }, fmtH(r.hrs)), h('td', { class: 'r' }, r.night ? fmtH(r.night) : ''), h('td', { class: 'r' }, r.ot ? fmtH(r.ot) : ''),
+      h('td', { class: 'r', style: r.wage ? '' : 'color:var(--shu)' }, r.wage ? yen(r.wage) : '未設定'), h('td', { class: 'r' }, yen(r.base)), h('td', { class: 'r' }, r.nightPay + r.otPay ? yen(r.nightPay + r.otPay) : ''), h('td', { class: 'r' }, r.transport ? yen(r.transport) : ''), h('td', { class: 'r' }, r.allowance ? yen(r.allowance) : ''),
+      h('td', { class: 'r' }, adjIn(p, 'extra', r.extra)), h('td', { class: 'r' }, adjIn(p, 'deduct', r.deduct)),
+      h('td', { class: 'r', style: 'font-weight:700' }, yen(r.total)),
+      h('td', null, r.bankOk ? h('span', { class: 'acct' }, `${r.bank.bankCode}-${r.bank.branchCode} ${r.bank.type === '2' ? '当座' : '普通'} ${r.bank.number}`) : h('span', { class: 'acct none' }, r.total > 0 ? '口座 未登録' : '')))),
+      h('tr', { class: 'tot' }, h('td', null, '合計'), h('td', { class: 'r' }, rows.reduce((a, x) => a + x.r.days, 0)), h('td', { class: 'r' }, fmtH(rows.reduce((a, x) => a + x.r.hrs, 0))), h('td', { colspan: 9 }), h('td', { class: 'r' }, yen(tot)), h('td', null, `${ready.length} 人分 振込可`)))));
+  const warn = []; if (noBank.length) warn.push(h('div', { class: 'notice shu' }, `口座が未登録のため振込ファイルに入りません：${noBank.map(x => x.p.name).join('、')}（スタッフ名をクリックして登録）`));
+  if (!c.bank.bankCode || !c.bank.number || !c.bank.holder) warn.push(h('div', { class: 'notice' }, '振込元（自社）の口座が未設定です。下の「振込元と計算ルール」で登録すると全銀ファイルを作れます。'));
+  const fileBtns = h('div', { class: 'row' },
+    h('button', { class: 'btn primary', disabled: !ready.length || !c.bank.bankCode || !downloads, onclick: () => exportZengin(ready, per), title: downloads ? '銀行のインターネットバンキング「総合振込」にアップロードする固定長ファイル' : 'この表示ではファイル保存を使えません' }, '全銀形式ファイルを保存'),
+    h('button', { class: 'btn', disabled: !rows.length, onclick: () => exportPayCsv(rows, per) }, '振込一覧 CSV'),
+    h('button', { class: 'btn', disabled: !rows.length, onclick: () => openSlipDialog(rows, per) }, '給与明細テキスト'),
+    h('span', { style: 'margin-left:auto' }),
+    mon.paidAt ? h('button', { class: 'btn', disabled: !w, onclick: async () => { const m = { ...(S.months[payYm] || {}) }; delete m.paidAt; delete m.paidTotal; await saveMonth(payYm, m); render(); } }, '支払済みを取り消す') : h('button', { class: 'btn', disabled: !w || !tot, onclick: async () => { if (!await confirmBox('支払済みにする', `${dayLabel(per.from)}〜${dayLabel(per.to)} 分 合計 ${yen(tot)} を支払済みとして記録します。加算・控除は固定されます。`, '記録する')) return; const m = JSON.parse(JSON.stringify(S.months[payYm] || {})); m.paidAt = Date.now(); m.paidTotal = tot; m.snapshot = Object.fromEntries(rows.map(({ p, r }) => [p.id, r.total])); await saveMonth(payYm, m); render(); toast('支払済みにしました', 'ok'); } }, '支払済みにする'));
+  const b = { ...c.bank };
+  const compForm = h('details', { class: 'fold' }, h('summary', null, '振込元と計算ルール'), h('div', { class: 'body' },
+    h('div', { class: 'grid3' },
+      f('cClose', '締め日', h('select', { id: 'cClose' }, [[0, '月末'], [15, '15日'], [20, '20日'], [25, '25日'], [10, '10日']].map(([v, l]) => h('option', { value: v, selected: Number(c.closingDay) === v }, l)))),
+      f('cPayOff', '支払月', h('select', { id: 'cPayOff' }, [[0, '当月'], [1, '翌月'], [2, '翌々月']].map(([v, l]) => h('option', { value: v, selected: Number(c.payMonthOffset) === v }, l)))),
+      f('cPayDay', '支払日', h('input', { id: 'cPayDay', type: 'number', min: 1, max: 31, value: c.payDay })),
+      f('cNight', '深夜割増（%・22時〜5時）', h('input', { id: 'cNight', type: 'number', min: 0, max: 100, value: c.nightRate })),
+      f('cOt', '残業割増（%・1日8h超）', h('input', { id: 'cOt', type: 'number', min: 0, max: 100, value: c.otRate })),
+      h('div', { class: 'field' }, h('label', null, '残業の計算'), h('label', { class: 'chk' }, h('input', { type: 'checkbox', id: 'cOtOn', checked: c.otDaily !== false }), '1日8時間を超えた分に割増'))),
+    h('h3', { style: 'font-size:13px;color:var(--muted);font-weight:500;margin:4px 0 0' }, '振込元（自社）の口座 — 全銀ファイルのヘッダーに入ります'),
+    h('div', { class: 'grid3' },
+      f('cHolder', '振込依頼人名（カナ）', h('input', { id: 'cHolder', type: 'text', value: b.holder, placeholder: 'カ）ヤマナカショウテン' })),
+      f('cClient', '振込依頼人コード（銀行から付与・10桁）', h('input', { id: 'cClient', type: 'text', class: 'num', value: c.clientCode || '', placeholder: '0000000000' })),
+      f('cBankCode', '銀行コード（4桁）', h('input', { id: 'cBankCode', type: 'text', class: 'num', value: b.bankCode, placeholder: '0005' })),
+      f('cBankName', '銀行名（カナ）', h('input', { id: 'cBankName', type: 'text', value: b.bankName, placeholder: 'ミツビシUFJ' })),
+      f('cBranchCode', '支店コード（3桁）', h('input', { id: 'cBranchCode', type: 'text', class: 'num', value: b.branchCode, placeholder: '001' })),
+      f('cBranchName', '支店名（カナ）', h('input', { id: 'cBranchName', type: 'text', value: b.branchName, placeholder: 'ホンテン' })),
+      f('cType', '預金種目', h('select', { id: 'cType' }, [['1', '普通'], ['2', '当座']].map(([v, l]) => h('option', { value: v, selected: (b.type || '1') === v }, l)))),
+      f('cNumber', '口座番号（7桁）', h('input', { id: 'cNumber', type: 'text', class: 'num', value: b.number, placeholder: '1234567' })),
+      h('div', { class: 'field' }, h('label', null, '改行'), h('label', { class: 'chk' }, h('input', { type: 'checkbox', id: 'cCrlf', checked: c.crlf !== false }), 'レコードごとに改行を入れる（ほとんどの銀行）'))),
+    h('div', { class: 'row' }, h('button', { class: 'btn primary', disabled: !w, onclick: () => { const nc = { ...c, closingDay: Number($('#cClose').value), payMonthOffset: Number($('#cPayOff').value), payDay: Number($('#cPayDay').value) || 25, nightRate: Number($('#cNight').value) || 0, otRate: Number($('#cOt').value) || 0, otDaily: $('#cOtOn').checked, crlf: $('#cCrlf').checked, clientCode: $('#cClient').value.replace(/\D/g, ''), bank: { holder: $('#cHolder').value.trim(), bankCode: $('#cBankCode').value.replace(/\D/g, ''), bankName: $('#cBankName').value.trim(), branchCode: $('#cBranchCode').value.replace(/\D/g, ''), branchName: $('#cBranchName').value.trim(), type: $('#cType').value, number: $('#cNumber').value.replace(/\D/g, '') } }; saveCompany(nc); toast('保存しました', 'ok'); } }, '保存'), h('span', { class: 'hint' }, 'この内容は管理者にしか見えません。'))));
+  return [head, ...warn, h('div', { class: 'panel' }, h('h2', null, '支給額', h('span', { class: 'sub' }, '時給×実働に、深夜・残業の割増、交通費（出勤日数分）、固定手当を加えた概算。源泉徴収や社会保険は含みません')), table, h('div', { style: 'height:10px' }), fileBtns),
+    compForm,
+    h('p', { class: 'hint' }, 'ここで作るのは銀行にアップロードする振込データです。実際の送金はインターネットバンキングの「総合振込」でこのファイルを取り込み、承認して確定します。')];
+}
+async function exportZengin(ready, per) {
+  const c = company(); const rows = ready.map(({ p, r }) => ({ name: p.name, bank: r.bank, amount: r.total }));
+  const bads = []; rows.forEach(r => { const t = toBankKana(r.bank.holder); if (t.bad.length) bads.push(`${r.name}：「${t.bad.join('')}」は使えない文字です`); });
+  [['振込依頼人名', c.bank.holder], ['銀行名', c.bank.bankName], ['支店名', c.bank.branchName]].forEach(([k, v]) => { const t = toBankKana(v); if (t.bad.length) bads.push(`${k}：「${t.bad.join('')}」は使えない文字です`); });
+  if (bads.length) { if (!await confirmBox('文字の確認', bads.join('\n') + '\n\n使えない文字は省いて作成します。口座名義は半角カナ・英数字で登録してください。', 'このまま作成')) return; }
+  const z = zenginFile(c, rows, per.pay);
+  try { await downloads.save({ filename: `furikomi_${payYm.replace('-', '')}.txt`, data: new Blob([z.bytes]) }); toast(`全銀ファイルを保存しました（${z.count} 件・${yen(z.total)}）`, 'ok'); }
+  catch (e) { if (e && e.code === 'declined') return; console.error(e); toast('保存できませんでした', 'bad'); }
+}
+async function exportPayCsv(rows, per) {
+  const esc = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const lines = [['スタッフ', '期間', '出勤日数', '実働h', '深夜h', '残業h', '時給', '基本給', '深夜割増', '残業割増', '交通費', '手当', '加算', '控除', '支給額', '銀行コード', '銀行名', '支店コード', '支店名', '種目', '口座番号', '口座名義'].map(esc).join(',')];
+  rows.forEach(({ p, r }) => lines.push([p.name, `${per.from}〜${per.to}`, r.days, fmtH(r.hrs), fmtH(r.night), fmtH(r.ot), r.wage, r.base, r.nightPay, r.otPay, r.transport, r.allowance, r.extra, r.deduct, r.total, r.bank.bankCode, r.bank.bankName, r.bank.branchCode, r.bank.branchName, r.bank.type === '2' ? '当座' : '普通', r.bank.number, r.bank.holder].map(esc).join(',')));
+  const data = '﻿' + lines.join('\r\n');
+  if (downloads) { try { await downloads.save({ filename: `kyuyo_${payYm.replace('-', '')}.csv`, data }); toast('CSV を保存しました', 'ok'); return; } catch (e) { if (e && e.code === 'declined') return; } }
+  openModal(h('div', { style: 'display:contents' }, h('h2', null, '振込一覧 CSV'), h('p', { class: 'hint', style: 'margin:0' }, 'コピーして .csv で保存してください。'), h('textarea', { readonly: true }, data), h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: closeModal }, '閉じる'))));
+}
+function openSlipDialog(rows, per) {
+  const c = company(); const st = settings();
+  const text = rows.filter(x => x.r.total > 0).map(({ p, r }) => [`【給与明細】${st.storeName}`, `${p.name} 様`, `対象期間：${per.from} 〜 ${per.to}　支払日：${fmtD(per.pay)}`, `出勤 ${r.days} 日　実働 ${fmtH(r.hrs)} h（深夜 ${fmtH(r.night)} h / 残業 ${fmtH(r.ot)} h）`, `基本給　　${yen(r.base)}（時給 ${yen(r.wage)}）`, r.nightPay ? `深夜割増　${yen(r.nightPay)}（${c.nightRate}%）` : null, r.otPay ? `残業割増　${yen(r.otPay)}（${c.otRate}%）` : null, r.transport ? `交通費　　${yen(r.transport)}` : null, r.allowance ? `手当　　　${yen(r.allowance)}` : null, r.extra ? `加算　　　${yen(r.extra)}` : null, r.deduct ? `控除　　　-${yen(r.deduct)}` : null, `支給額　　${yen(r.total)}`, r.note ? `備考：${r.note}` : null].filter(Boolean).join('\n')).join('\n\n----------------\n\n');
+  const ta = h('textarea', { id: 'slipText', readonly: true, style: 'min-height:320px' }, text);
+  openModal(h('div', { style: 'display:contents' }, h('h2', null, '給与明細テキスト'), h('p', { class: 'hint', style: 'margin:0' }, '一人ずつ区切ってあります。LINE やメールに貼って渡せます。'), ta, h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: closeModal }, '閉じる'), h('button', { class: 'btn primary', onclick: async () => { try { await navigator.clipboard.writeText(ta.value); toast('コピーしました', 'ok'); } catch (e) { ta.focus(); ta.select(); toast('選択したテキストをコピーしてください'); } } }, 'すべてコピー'))));
+}
+
+// ---------- submit (staff) ----------
+function renderSubmit() {
+  const st = settings(); const staff = staffList();
+  if (!me) return h('div', { class: 'empty' }, h('h2', null, 'ログインが必要です'), h('p', null, '希望を送るには、招待されたアカウントで claude.ai にログインしてこのページを開いてください。'));
+  if (!staff.length) return emptyState();
+  const my = S.myReq; const p = my && S.staff[my.staffId];
+  if (!p) {
+    return [h('div', { class: 'submit-head' }, h('h2', null, 'あなたの名前を選んでください'), h('span', { class: 'hint' }, '一度選ぶと、次からは自動であなたの画面になります。管理者が本人確認をします。')),
+      h('div', { class: 'pick' }, staff.map(s => { const taken = s.userId && s.userId !== me; return h('button', { style: `--c:${s.color}`, disabled: taken, onclick: () => saveMyReq({ staffId: s.id, items: {}, at: Date.now() }) }, h('span', { class: 'dot' }), h('span', null, s.name, h('small', null, taken ? '別のアカウントで登録済み' : (s.role || '　')))); }))];
+  }
+  const now = new Date(); const months = []; for (let i = 0; i <= (st.reqHorizonMonths || 1); i++) months.push(new Date(now.getFullYear(), now.getMonth() + i, 1));
+  const items = my.items || {}; const byDate = {}; Object.entries(items).forEach(([id, it]) => { byDate[it.date] = { ...it, id }; });
+  const linked = p.userId === me;
+  const dl = st.reqDeadlineDay || 0; const nextM = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const dlPassed = dl > 0 && now.getDate() > dl;
+  const head = h('div', { class: 'submit-head' }, h('h2', null, `${p.name} さんの希望`), linked ? h('span', { class: 'tag on' }, '本人確認済み') : h('span', { class: 'tag ro' }, '管理者の本人確認待ち'), h('span', { style: 'margin-left:auto' }), h('button', { class: 'btn sm ghost', onclick: async () => { if (await confirmBox('名前を選び直す', '送った希望はそのまま残ります。別の名前を選ぶと管理者が再確認します。', '選び直す')) saveMyReq({ ...my, staffId: '' }); } }, '名前を選び直す'));
+  const notices = [];
+  if (dl > 0) notices.push(h('div', { class: 'notice ' + (dlPassed ? 'shu' : 'ai') }, `${nextM.getMonth() + 1}月分の締切は ${dl} 日です。` + (dlPassed ? ' 締切を過ぎています。送ることはできますが、反映は管理者の判断になります。' : '')));
+  if (st.reqNotice) notices.push(h('div', { class: 'notice' }, st.reqNotice));
+  const legend = h('div', { class: 'legend' }, h('span', null, h('i', { style: 'border:1.5px dotted var(--ai)' }), '申請中'), h('span', null, h('i', { style: 'background:var(--ok-soft);border:1px solid var(--ok)' }), '承認済み'), h('span', null, h('i', { style: 'border:1px solid var(--rule)' }), '見送り'), h('span', null, h('i', { style: 'background:var(--paper2);border-left:3px solid var(--ink2)' }), '確定したシフト'), h('span', { class: 'hint' }, '日付をタップして希望を入れます。'));
+  const grids = months.map(m0 => {
+    const y = m0.getFullYear(), m = m0.getMonth(); const order = []; for (let i = 0; i < 7; i++) order.push((st.weekStart + i) % 7);
+    const cells = order.map(wd => h('div', { class: 'mh' + (wd === 6 ? ' sat' : wd === 0 ? ' sun' : '') }, WD[wd]));
+    const start = startOfWeek(m0, st.weekStart); const end = new Date(y, m + 1, 0);
+    for (let d = start, i = 0; i < 42; d = addD(d, 1), i++) {
+      if (d > end && d.getDay() === st.weekStart) break;
+      const ds = fmtD(d); const inM = d.getMonth() === m; const past = ds < todayStr();
+      if (!inM) { cells.push(h('div', { class: 'sday out' })); continue; }
+      const c = ['sday']; if (past) c.push('past'); if (ds === todayStr()) c.push('today'); if (d.getDay() === 6) c.push('sat'); if (d.getDay() === 0) c.push('sun'); if (st.showHolidays && HOLIDAYS[ds]) c.push('hol');
+      const fixed = Object.values(S.shifts).filter(s => s.staffId === p.id && s.date === ds);
+      const mine = byDate[ds];
+      cells.push(h('div', { class: c.join(' '), onclick: () => { if (!past) openSubmitDialog(p, ds, mine); } },
+        h('div', { class: 'd' }, d.getDate(), st.showHolidays && HOLIDAYS[ds] ? h('small', null, HOLIDAYS[ds]) : null),
+        fixed.map(s => h('div', { class: 'fixed' + (s.kind === 'off' ? ' off' : ''), style: `--c:${chipColor(s)}` }, s.kind === 'off' ? '休み' : `${chipName(s)} ${mmToStr(s.start)}`)),
+        mine && (mine.status === 'pending' || !fixed.some(s => s.id === mine.shiftId)) ? h('div', { class: 'mine ' + mine.status }, mine.kind === 'off' ? '休み希望' : `出勤 ${mmToStr(mine.start)}–${mmToStr(mine.end)}`) : null));
+    }
+    return h('div', { class: 'panel', style: 'padding:12px' }, h('h2', null, `${y}年${m + 1}月`), h('div', { class: 'mgrid' }, cells));
+  });
+  const list = Object.entries(items).map(([id, it]) => ({ ...it, id })).filter(it => it.date >= todayStr()).sort((a, b) => a.date.localeCompare(b.date));
+  const mineList = list.length ? h('div', { class: 'panel' }, h('h2', null, '送った希望'), h('table', { class: 'list' }, h('tbody', null, list.map(it => h('tr', null, h('td', { class: 'num' }, dayLabel(it.date)), h('td', null, it.kind === 'off' ? '休み希望' : `出勤希望 ${mmToStr(it.start)}–${mmToStr(it.end)}`), h('td', null, it.note ? h('span', { class: 'hint' }, it.note) : null), h('td', null, h('span', { class: 'st ' + it.status }, it.status === 'pending' ? '申請中' : it.status === 'approved' ? '承認' : '見送り')), h('td', { class: 'r' }, it.status === 'pending' ? h('button', { class: 'btn sm ghost', onclick: () => removeMyReq(it.id) }, '取り消す') : null)))))) : null;
+  return [head, ...notices, legend, ...grids, mineList];
+}
+function openSubmitDialog(p, ds, existing) {
+  const st = settings(); const m = existing ? { ...existing } : { id: uid('rq'), date: ds, kind: 'off', start: st.templates[0]?.start ?? 540, end: st.templates[0]?.end ?? 1080, brk: st.templates[0]?.brk ?? 60, tpl: st.templates[0]?.id || '', note: '', status: 'pending', at: Date.now() };
+  const locked = existing && existing.status !== 'pending';
+  const f = (id, label, input) => h('div', { class: 'field' }, h('label', { for: id }, label), input);
+  const startIn = h('input', { id: 'rqStart', type: 'time', value: toTimeVal(m.start), onchange: () => { m.start = strToMm(startIn.value); m.tpl = ''; syncTpl(); } });
+  const endIn = h('input', { id: 'rqEnd', type: 'time', value: toTimeVal(m.end), onchange: () => { m.end = strToMm(endIn.value); m.tpl = ''; syncTpl(); } });
+  const tplRow = h('div', { class: 'row' });
+  const workBox = h('div', { style: 'display:flex;flex-direction:column;gap:10px' }, h('div', { class: 'field' }, h('label', null, '区分'), tplRow), h('div', { class: 'grid2', style: 'grid-template-columns:1fr 1fr' }, f('rqStart', '開始', startIn), f('rqEnd', '終了', endIn)));
+  const syncTpl = () => { fill(tplRow, st.templates.map(t => h('button', { type: 'button', class: 'tplbtn', style: `--c:${t.color}`, 'aria-pressed': String(m.tpl === t.id), onclick: () => { m.tpl = t.id; m.start = t.start; m.end = t.end; m.brk = t.brk; startIn.value = toTimeVal(t.start); endIn.value = toTimeVal(t.end); syncTpl(); } }, h('i'), t.name, ' ', h('span', { class: 'num', style: 'font-size:11px;color:var(--muted)' }, `${mmToStr(t.start)}–${mmToStr(t.end)}`))), h('button', { type: 'button', class: 'tplbtn', style: '--c:#5b6b7c', 'aria-pressed': String(!m.tpl), onclick: () => { m.tpl = ''; syncTpl(); } }, h('i'), '時間を指定')); };
+  const kindRow = h('div', { class: 'row' }, [['off', '休みたい'], ['work', '出勤できる・したい']].map(([k, l]) => h('label', { class: 'chk' }, h('input', { type: 'radio', name: 'rqKind', id: 'rqKind_' + k, checked: m.kind === k, onchange: () => { m.kind = k; workBox.hidden = k === 'off'; } }), l)));
+  workBox.hidden = m.kind === 'off'; syncTpl();
+  const noteIn = h('input', { id: 'rqNote', type: 'text', value: m.note || '', placeholder: '例：午前だけなら可、通院のため', oninput: () => { m.note = noteIn.value; } });
+  const save = () => {
+    const out = { ...m, status: 'pending', at: Date.now() }; delete out.decidedAt; delete out.shiftId;
+    if (out.kind === 'work') { if (out.end <= out.start) out.end += 1440; if (out.end >= out.start + 1440) out.end -= 1440; } else { out.start = 0; out.end = 0; out.brk = 0; out.tpl = ''; }
+    const id = out.id; delete out.id;
+    const doc = JSON.parse(JSON.stringify(S.myReq)); doc.items = doc.items || {}; doc.items[id] = out; doc.at = Date.now();
+    saveMyReq(doc); closeModal(); toast('送りました', 'ok');
+  };
+  openModal(h('form', { style: 'display:contents', onsubmit: e => { e.preventDefault(); save(); } },
+    h('h2', null, `${dayLabel(ds)} の希望`),
+    locked ? h('div', { class: 'notice' }, existing.status === 'approved' ? 'この希望は承認済みです。変更したい場合は新しい内容で送り直すと、もう一度申請になります。' : 'この希望は見送られました。内容を変えて送り直せます。') : null,
+    h('div', { class: 'field' }, h('label', null, '種類'), kindRow), workBox, f('rqNote', 'ひとこと（任意）', noteIn),
+    h('div', { class: 'foot' }, existing ? h('button', { type: 'button', class: 'btn danger left', onclick: () => { removeMyReq(existing.id); closeModal(); } }, '取り消す') : null, h('button', { type: 'button', class: 'btn', onclick: closeModal }, 'キャンセル'), h('button', { type: 'submit', class: 'btn primary' }, existing ? '送り直す' : '送る'))));
+}
+function removeMyReq(id) { const doc = JSON.parse(JSON.stringify(S.myReq)); if (doc.items) delete doc.items[id]; doc.at = Date.now(); saveMyReq(doc); toast('取り消しました'); }
+
+// ---------- dialogs ----------
+let modalEl = null;
+function openModal(node, wide) { closeModal(); modalEl = h('div', { class: 'modal', onclick: e => { if (e.target === modalEl) closeModal(); } }, h('div', { class: 'sheet' + (wide ? ' wide' : ''), role: 'dialog', 'aria-modal': 'true' }, node)); document.body.append(modalEl); const f = modalEl.querySelector('input:not([type=radio]):not([type=checkbox]),select,textarea,button'); if (f) f.focus(); }
+function closeModal() { if (modalEl) { modalEl.remove(); modalEl = null; } }
+function confirmBox(title, msg, okLabel) { return new Promise(res => { openModal(h('div', { style: 'display:contents' }, h('h2', null, title), h('p', { style: 'margin:0;white-space:pre-line' }, msg), h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: () => { closeModal(); res(false); } }, 'キャンセル'), h('button', { class: 'btn primary', onclick: () => { closeModal(); res(true); } }, okLabel || 'OK')))); }); }
+function openShiftDialog(opt) {
+  const st = settings(); const staff = staffList(); if (!staff.length) return;
+  const ex = opt.id ? S.shifts[opt.id] : null; const w = canWrite();
+  const m = ex ? { ...ex } : { id: uid('sh'), date: opt.date || fmtD(cur), staffId: opt.staffId || staff[0].id, kind: 'work', start: opt.start ?? st.templates[0]?.start ?? 540, end: opt.start != null ? opt.start + 480 : (st.templates[0]?.end ?? 1080), brk: st.templates[0]?.brk ?? 60, tpl: opt.start != null ? '' : (st.templates[0]?.id || ''), note: '' };
+  const f = (id, label, input) => h('div', { class: 'field' }, h('label', { for: id }, label), input);
+  const staffSel = h('select', { id: 'shStaff', onchange: e => { m.staffId = e.target.value; } }, staff.map(p => h('option', { value: p.id, selected: p.id === m.staffId }, p.name)));
+  const dateIn = h('input', { id: 'shDate', type: 'date', value: m.date, onchange: e => { if (e.target.value) m.date = e.target.value; } });
+  const startIn = h('input', { id: 'shStart', type: 'time', value: toTimeVal(m.start), onchange: () => { m.start = strToMm(startIn.value); m.tpl = ''; syncTpl(); } });
+  const endIn = h('input', { id: 'shEnd', type: 'time', value: toTimeVal(m.end), onchange: () => { m.end = strToMm(endIn.value); m.tpl = ''; syncTpl(); } });
+  const brkIn = h('input', { id: 'shBrk', type: 'number', min: 0, step: 5, value: m.brk, onchange: () => { m.brk = Number(brkIn.value) || 0; syncTpl(); } });
+  const noteIn = h('input', { id: 'shNote', type: 'text', value: m.note || '', placeholder: '例：レジ担当、15時早上がり', oninput: () => { m.note = noteIn.value; } });
+  const info = h('div', { class: 'hint' });
+  const tplRow = h('div', { class: 'row' });
+  const workBox = h('div', { style: 'display:flex;flex-direction:column;gap:10px' }, h('div', { class: 'field' }, h('label', null, '区分'), tplRow), h('div', { class: 'grid2', style: 'grid-template-columns:1fr 1fr 1fr' }, f('shStart', '開始', startIn), f('shEnd', '終了', endIn), f('shBrk', '休憩（分）', brkIn)), info);
+  const syncTpl = () => {
+    let e = m.end; if (e <= m.start) e += 1440; if (e >= m.start + 1440) e -= 1440; const hrs = Math.max(0, e - m.start - m.brk) / 60;
+    info.textContent = `${mmToStr(m.start)}–${mmToStr(e)}  実働 ${fmtH(hrs)}h` + (e >= 1440 ? '（翌日まで）' : '');
+    fill(tplRow, st.templates.map(t => h('button', { type: 'button', class: 'tplbtn', style: `--c:${t.color}`, 'aria-pressed': String(m.tpl === t.id), onclick: () => { m.tpl = t.id; m.start = t.start; m.end = t.end; m.brk = t.brk; startIn.value = toTimeVal(t.start); endIn.value = toTimeVal(t.end); brkIn.value = t.brk; syncTpl(); } }, h('i'), t.name, ' ', h('span', { class: 'num', style: 'font-size:11px;color:var(--muted)' }, `${mmToStr(t.start)}–${mmToStr(t.end)}`))), h('button', { type: 'button', class: 'tplbtn', style: '--c:#5b6b7c', 'aria-pressed': String(!m.tpl), onclick: () => { m.tpl = ''; syncTpl(); } }, h('i'), '自由入力'));
+  };
+  const kindRow = h('div', { class: 'row' }, ['work', 'off'].map(k => h('label', { class: 'chk' }, h('input', { type: 'radio', name: 'shKind', id: 'shKind_' + k, checked: m.kind === k, onchange: () => { m.kind = k; workBox.hidden = k === 'off'; } }), k === 'work' ? '勤務' : '希望休（出勤しない）')));
+  workBox.hidden = m.kind === 'off'; syncTpl();
+  const save = () => {
+    if (!w) { toast('閲覧のみの権限です', 'bad'); return; }
+    const out = { ...m }; if (out.kind === 'work') { if (out.end <= out.start) out.end += 1440; if (out.end >= out.start + 1440) out.end -= 1440; } else { out.start = 0; out.end = 0; out.brk = 0; out.tpl = ''; }
+    const dup = Object.values(S.shifts).find(s => s.id !== out.id && s.staffId === out.staffId && s.date === out.date && s.kind === 'off' && out.kind === 'off');
+    if (dup) { toast('この日はすでに希望休です'); closeModal(); return; }
+    commit(ex ? 'シフトを変更' : 'シフトを追加', [{ id: out.id, before: ex || null, after: out }]); closeModal();
+  };
+  const sheet = h('form', { style: 'display:contents', onsubmit: e => { e.preventDefault(); save(); } },
+    h('h2', null, ex ? 'シフトを編集' : 'シフトを追加'),
+    h('div', { class: 'grid2' }, f('shStaff', 'スタッフ', staffSel), f('shDate', '日付', dateIn)),
+    h('div', { class: 'field' }, h('label', null, '種類'), kindRow),
+    workBox,
+    f('shNote', 'メモ', noteIn),
+    h('div', { class: 'foot' }, ex ? h('button', { type: 'button', class: 'btn danger left', disabled: !w, onclick: () => { commit('シフトを削除', [{ id: ex.id, before: ex, after: null }]); closeModal(); } }, '削除') : null,
+      ex ? h('button', { type: 'button', class: 'btn', disabled: !w, title: '翌日に同じシフトを複製', onclick: () => { const c = { ...m, id: uid('sh'), date: fmtD(addD(parseD(m.date), 1)) }; commit('翌日へ複製', [{ id: c.id, before: null, after: c }]); closeModal(); } }, '翌日へ複製') : null,
+      h('button', { type: 'button', class: 'btn', onclick: closeModal }, 'キャンセル'), h('button', { type: 'submit', class: 'btn primary', disabled: !w }, '保存')));
+  openModal(sheet);
+}
+function openStaffDialog(id, focusPay) {
+  const ex = id ? S.staff[id] : null; const list = staffList(); const w = canWrite();
+  const m = ex ? JSON.parse(JSON.stringify(ex)) : { id: uid('st'), name: '', role: '', color: PALETTE[list.length % PALETTE.length], maxHours: 40, avail: [true, true, true, true, true, true, true], memo: '', order: list.length };
+  delete m.wage;
+  const pr = ex ? payOf(ex.id) : EMPTY_PAY();
+  if (!m.avail) m.avail = [true, true, true, true, true, true, true];
+  const f = (fid, label, input) => h('div', { class: 'field' }, h('label', { for: fid }, label), input);
+  const nameIn = h('input', { id: 'stName', type: 'text', value: m.name, required: true, placeholder: '氏名' });
+  const roleIn = h('input', { id: 'stRole', type: 'text', value: m.role, placeholder: '例：社員、アルバイト、リーダー' });
+  const colorIn = h('input', { id: 'stColor', type: 'color', value: m.color });
+  const maxIn = h('input', { id: 'stMax', type: 'number', min: 0, max: 168, step: 0.5, value: m.maxHours });
+  const memoIn = h('input', { id: 'stMemo', type: 'text', value: m.memo || '', placeholder: '例：学生、月曜は午後のみ' });
+  const availRow = h('div', { class: 'row' }, [1, 2, 3, 4, 5, 6, 0].map(wd => h('label', { class: 'chk' + (wd === 6 ? ' sat' : wd === 0 ? ' sun' : '') }, h('input', { type: 'checkbox', id: 'stAv' + wd, checked: m.avail[wd] !== false, onchange: e => { m.avail[wd] = e.target.checked; } }), WD[wd])));
+  const wageIn = h('input', { id: 'stWage', type: 'number', min: 0, step: 10, value: pr.wage || '', placeholder: '1200' });
+  const trIn = h('input', { id: 'stTr', type: 'number', min: 0, step: 10, value: pr.transport || '', placeholder: '0' });
+  const alIn = h('input', { id: 'stAl', type: 'number', min: 0, step: 100, value: pr.allowance || '', placeholder: '0' });
+  const b = pr.bank;
+  const bk = { bankCode: h('input', { id: 'bkCode', type: 'text', class: 'num', value: b.bankCode, placeholder: '0005', inputmode: 'numeric' }), bankName: h('input', { id: 'bkName', type: 'text', value: b.bankName, placeholder: 'ミツビシUFJ' }), branchCode: h('input', { id: 'brCode', type: 'text', class: 'num', value: b.branchCode, placeholder: '001', inputmode: 'numeric' }), branchName: h('input', { id: 'brName', type: 'text', value: b.branchName, placeholder: 'シブヤ' }), type: h('select', { id: 'bkType' }, [['1', '普通'], ['2', '当座']].map(([v, l]) => h('option', { value: v, selected: (b.type || '1') === v }, l))), number: h('input', { id: 'bkNum', type: 'text', class: 'num', value: b.number, placeholder: '1234567', inputmode: 'numeric' }), holder: h('input', { id: 'bkHolder', type: 'text', value: b.holder, placeholder: 'ヤマダ タロウ' }) };
+  const kanaHint = h('div', { class: 'hint' });
+  const syncKana = () => { const t = toBankKana(bk.holder.value); kanaHint.textContent = bk.holder.value ? `銀行への記載：${t.text}` + (t.bad.length ? `　（「${t.bad.join('')}」は使えません）` : '') : ''; }; bk.holder.addEventListener('input', syncKana); syncKana();
+  const linkRow = role === 'owner' && ex ? h('div', { class: 'row' }, h('span', { class: 'hint' }, m.userId ? `提出用アカウント：${names[m.userId] || '連携済み'}` : '提出用アカウント：未連携（本人が「提出」で名前を選ぶと申請タブに出ます）'), m.userId ? h('button', { type: 'button', class: 'btn sm', onclick: () => { delete m.userId; linkRow.replaceChildren(h('span', { class: 'hint' }, '保存すると連携を解除します')); } }, '連携を解除') : null) : null;
+  const save = () => {
+    if (!w) { toast('閲覧のみの権限です', 'bad'); return; }
+    m.name = nameIn.value.trim(); if (!m.name) { nameIn.focus(); return; }
+    m.role = roleIn.value.trim(); m.color = colorIn.value; m.maxHours = Number(maxIn.value) || 0; m.memo = memoIn.value.trim();
+    const np = { wage: Number(wageIn.value) || 0, transport: Number(trIn.value) || 0, allowance: Number(alIn.value) || 0, bank: { bankCode: bk.bankCode.value.replace(/\D/g, ''), bankName: bk.bankName.value.trim(), branchCode: bk.branchCode.value.replace(/\D/g, ''), branchName: bk.branchName.value.trim(), type: bk.type.value, number: bk.number.value.replace(/\D/g, ''), holder: bk.holder.value.trim() } };
+    saveStaff(m); savePay(m.id, np); closeModal(); toast(ex ? '保存しました' : `${m.name} さんを追加しました`, 'ok');
+  };
+  const payBox = h('div', { style: 'display:flex;flex-direction:column;gap:10px' },
+    h('h3', null, '給与と振込先 — 管理者だけが見られます'),
+    h('div', { class: 'grid2', style: 'grid-template-columns:1fr 1fr 1fr' }, f('stWage', '時給（円）', wageIn), f('stTr', '交通費（円/出勤日）', trIn), f('stAl', '固定手当（円/月）', alIn)),
+    h('div', { class: 'grid2', style: 'grid-template-columns:1fr 2fr' }, f('bkCode', '銀行コード', bk.bankCode), f('bkName', '銀行名（カナ）', bk.bankName)),
+    h('div', { class: 'grid2', style: 'grid-template-columns:1fr 2fr' }, f('brCode', '支店コード', bk.branchCode), f('brName', '支店名（カナ）', bk.branchName)),
+    h('div', { class: 'grid2', style: 'grid-template-columns:1fr 1fr 2fr' }, f('bkType', '種目', bk.type), f('bkNum', '口座番号', bk.number), f('bkHolder', '口座名義（カナ）', bk.holder)), kanaHint);
+  openModal(h('form', { style: 'display:contents', onsubmit: e => { e.preventDefault(); save(); } },
+    h('h2', null, ex ? 'スタッフを編集' : 'スタッフを追加'),
+    h('div', { class: 'grid2' }, f('stName', '名前', nameIn), f('stRole', '役割', roleIn)),
+    h('div', { class: 'grid2', style: 'grid-template-columns:auto 1fr' }, f('stColor', '色', colorIn), f('stMax', '週の上限時間', maxIn)),
+    h('div', { class: 'field' }, h('label', null, '出勤できる曜日'), availRow),
+    f('stMemo', 'メモ', memoIn), linkRow,
+    isAdmin() ? payBox : null,
+    h('div', { class: 'foot' }, ex ? h('button', { type: 'button', class: 'btn danger left', disabled: !w, onclick: async () => { const n = Object.values(S.shifts).filter(s => s.staffId === ex.id).length; closeModal(); if (await confirmBox('スタッフを削除', `${ex.name} さんを削除します。登録済みのシフト ${n} 件も一緒に消えます。`, '削除する')) { removeStaff(ex.id); toast('削除しました'); } } }, '削除') : null,
+      h('button', { type: 'button', class: 'btn', onclick: closeModal }, 'キャンセル'), h('button', { type: 'submit', class: 'btn primary', disabled: !w }, '保存'))), true);
+  if (focusPay) setTimeout(() => wageIn.focus(), 0);
+}
+function openShareDialog() {
+  const st = settings(); const r = view === 'week' || view === 'day' ? (() => { const a = startOfWeek(cur, st.weekStart); return { from: fmtD(a), to: fmtD(addD(a, 6)) }; })() : visibleRange();
+  const inR = Object.values(S.shifts).filter(s => s.date >= r.from && s.date <= r.to && S.staff[s.staffId]).sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start);
+  const text = () => {
+    const lines = [`【${st.storeName} シフト ${dayLabel(r.from)}〜${dayLabel(r.to)}】`];
+    for (let d = parseD(r.from); fmtD(d) <= r.to; d = addD(d, 1)) {
+      const ds = fmtD(d); const day = inR.filter(s => s.date === ds); lines.push('', `■ ${dayLabel(ds)}${HOLIDAYS[ds] && st.showHolidays ? ' ' + HOLIDAYS[ds] : ''}`);
+      if (!day.length) { lines.push('　（シフトなし）'); continue; }
+      const groups = [...st.templates.map(t => ({ name: t.name, list: day.filter(s => s.kind === 'work' && s.tpl === t.id) })), { name: 'その他', list: day.filter(s => s.kind === 'work' && !tplOf(s.tpl)) }];
+      groups.forEach(g => { if (g.list.length) lines.push(`　${g.name}：` + g.list.map(s => `${S.staff[s.staffId].name}(${mmToStr(s.start)}-${mmToStr(s.end)})`).join('、')); });
+      const off = day.filter(s => s.kind === 'off'); if (off.length) lines.push('　希望休：' + off.map(s => S.staff[s.staffId].name).join('、'));
+    }
+    return lines.join('\n');
+  };
+  const csv = () => { const esc = v => '"' + String(v ?? '').replace(/"/g, '""') + '"'; const rows = [['日付', '曜日', 'スタッフ', '役割', '種類', '区分', '開始', '終了', '休憩(分)', '実働(h)', 'メモ'].map(esc).join(',')]; inR.forEach(s => { const p = S.staff[s.staffId]; rows.push([s.date, WD[parseD(s.date).getDay()], p.name, p.role, s.kind === 'work' ? '勤務' : '希望休', s.kind === 'work' ? (tplOf(s.tpl)?.name || '自由入力') : '', s.kind === 'work' ? mmToStr(s.start) : '', s.kind === 'work' ? mmToStr(s.end) : '', s.kind === 'work' ? s.brk : '', s.kind === 'work' ? fmtH(hours(s)) : '', s.note].map(esc).join(',')); }); return '﻿' + rows.join('\r\n'); };
+  const ta = h('textarea', { id: 'shareText', readonly: true }, text());
+  const copyBtn = h('button', { type: 'button', class: 'btn primary', onclick: async () => { try { await navigator.clipboard.writeText(ta.value); toast('コピーしました', 'ok'); } catch (e) { ta.focus(); ta.select(); toast('選択したテキストをコピーしてください'); } } }, 'テキストをコピー');
+  const csvBtn = h('button', { type: 'button', class: 'btn', onclick: async () => { const data = csv(); if (downloads) { try { await downloads.save({ filename: `shift_${r.from}_${r.to}.csv`, data }); toast('CSV を保存しました', 'ok'); return; } catch (e) { if (e && e.code === 'declined') return; } } ta.value = data; ta.focus(); ta.select(); toast('CSV の内容を表示しました。コピーして .csv で保存してください'); } }, 'CSV（Excel 用）');
+  openModal(h('div', { style: 'display:contents' }, h('h2', null, '共有・書き出し'), h('p', { class: 'hint', style: 'margin:0' }, `${dayLabel(r.from)}〜${dayLabel(r.to)} の内容です。LINE やメールにそのまま貼れる形になっています。`), ta,
+    h('div', { class: 'foot' }, h('button', { type: 'button', class: 'btn left', onclick: () => { ta.value = text(); } }, 'テキストに戻す'), csvBtn, h('button', { type: 'button', class: 'btn', onclick: closeModal }, '閉じる'), copyBtn)));
+}
+
+// ---------- actions ----------
+async function runAuto() {
+  if (!canWrite()) return; if (!staffList().length) { toast('先にスタッフを登録してください'); return; }
+  const r = visibleRange();
+  const { ops, unfilled } = autoAssignPlan(r.from, r.to);
+  if (!ops.length) { toast(unfilled ? `埋められる候補がいません（${unfilled} 枠が不足のまま）` : '不足している枠はありません', unfilled ? 'bad' : 'ok'); return; }
+  if (!await confirmBox('自動割当', `${dayLabel(r.from)}〜${dayLabel(r.to)} の不足枠に ${ops.length} 件のシフトを追加します。` + (unfilled ? ` ${unfilled} 枠は条件に合う人がいないため残ります。` : '') + ' 既存のシフトと申請中の休み希望は避けます。', '追加する')) return;
+  commit('自動割当', ops); toast(`${ops.length} 件を割り当てました（Ctrl+Z で戻せます）`, 'ok');
+}
+async function copyPrevWeek() {
+  if (!canWrite()) return; const r = visibleRange(); const pf = fmtD(addD(parseD(r.from), -7)), pt = fmtD(addD(parseD(r.to), -7));
+  const src = Object.values(S.shifts).filter(s => s.date >= pf && s.date <= pt && S.staff[s.staffId]);
+  if (!src.length) { toast('前の週にシフトがありません'); return; }
+  const ops = []; src.forEach(s => { const date = fmtD(addD(parseD(s.date), 7)); if (Object.values(S.shifts).some(x => x.staffId === s.staffId && x.date === date)) return; const c = { ...s, id: uid('sh'), date }; ops.push({ id: c.id, before: null, after: c }); });
+  if (!ops.length) { toast('すでに同じ日にシフトがあるため、複製するものがありません'); return; }
+  if (!await confirmBox('前週コピー', `${dayLabel(pf)}〜${dayLabel(pt)} のシフト ${ops.length} 件をこの週に複製します。すでにシフトがある人の日は飛ばします。`, '複製する')) return;
+  commit('前週コピー', ops); toast(`${ops.length} 件を複製しました`, 'ok');
+}
+async function loadSample() {
+  if (!canWrite()) return;
+  const names_ = [['佐藤 美咲', '社員', 1400, 40], ['田中 健太', '社員', 1350, 40], ['鈴木 さくら', 'アルバイト', 1150, 25], ['高橋 大輔', 'アルバイト', 1150, 30], ['伊藤 結衣', 'アルバイト', 1100, 20], ['渡辺 翔', 'パート', 1200, 32]];
+  const avails = [[true, true, true, true, true, true, true], [true, true, true, true, true, true, true], [true, false, true, false, true, true, true], [true, true, true, true, true, false, false], [true, false, false, true, true, true, true], [false, true, true, true, true, true, false]];
+  const ps = names_.map(([name, role_, wage, maxHours], i) => ({ p: { id: uid('st'), name, role: role_, color: PALETTE[i], maxHours, avail: avails[i], memo: 'サンプル', order: i }, wage }));
+  for (const { p, wage } of ps) { S.staff[p.id] = p; S.payroll[p.id] = { ...EMPTY_PAY(), wage }; try { await writeDoc('staff/' + p.id, p); await writeDoc('payroll/' + p.id, S.payroll[p.id]); } catch (e) { writeErr(e); return; } }
+  if (!S.settings) await saveSettings(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+  const w = startOfWeek(cur, settings().weekStart); const r = { from: fmtD(addD(w, -7)), to: fmtD(addD(w, 13)) };
+  const offs = [{ id: uid('sh'), date: fmtD(addD(w, 2)), staffId: ps[2].p.id, kind: 'off', start: 0, end: 0, brk: 0, tpl: '', note: '試験' }, { id: uid('sh'), date: fmtD(addD(w, 5)), staffId: ps[4].p.id, kind: 'off', start: 0, end: 0, brk: 0, tpl: '', note: '' }];
+  for (const o of offs) S.shifts[o.id] = o;
+  const { ops } = autoAssignPlan(r.from, r.to);
+  const all = offs.map(o => ({ id: o.id, before: null, after: o })).concat(ops);
+  for (const op of ops) S.shifts[op.id] = op.after;
+  render(); await persistShiftOps(all, 'after'); toast(`サンプルのスタッフ ${ps.length} 人とシフト ${all.length} 件を入れました`, 'ok');
+}
+function toast(msg, kind) { const t = h('div', { class: 'toast' + (kind ? ' ' + kind : '') }, msg); $('#toasts').append(t); setTimeout(() => t.remove(), 3200); }
+function shiftPeriod(n) { if (view === 'week') cur = addD(cur, 7 * n); else if (view === 'day') cur = addD(cur, n); else cur = new Date(cur.getFullYear(), cur.getMonth() + n, 1); render(); }
+
+// ---------- wiring ----------
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; view = b.dataset.view; render(); });
+$('#prevBtn').onclick = () => shiftPeriod(-1); $('#nextBtn').onclick = () => shiftPeriod(1);
+$('#todayBtn').onclick = () => { cur = new Date(); cur.setHours(0, 0, 0, 0); render(); };
+$('#undoBtn').onclick = undo; $('#redoBtn').onclick = redo; $('#autoBtn').onclick = runAuto; $('#copyPrevBtn').onclick = copyPrevWeek; $('#shareBtn').onclick = openShareDialog;
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); return; }
+  const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName || '');
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); undo(); }
+  else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z')) && !typing) { e.preventDefault(); redo(); }
+  else if (!typing && !modalEl && $('#period').hidden === false && e.key === 'ArrowLeft') shiftPeriod(-1);
+  else if (!typing && !modalEl && $('#period').hidden === false && e.key === 'ArrowRight') shiftPeriod(1);
+});
+try { window.claude?.hot?.snapshot?.(() => ({ view, cur: fmtD(cur), payYm })); } catch (e) { }
+
+// Names of request senders, for the owner's 本人確認 row. Only ids are stored; names resolve at render time.
+let nameKey = '';
+async function resolveNames() {
+  if (!userApi) return; const ids = new Set(Object.keys(S.requests)); Object.values(S.staff).forEach(p => { if (p.userId) ids.add(p.userId); });
+  const key = [...ids].sort().join(','); if (!ids.size || key === nameKey) return; nameKey = key;
+  try { const ps = await userApi.profiles([...ids]); let changed = false; for (const id in ps) { const n = ps[id].name || ''; if (names[id] !== n) { names[id] = n; changed = true; } } if (changed) render(); } catch (e) { }
+}
+async function boot(hot) {
+  if (hot && hot.view) { view = hot.view; if (hot.cur) cur = parseD(hot.cur); if (hot.payYm) payYm = hot.payYm; }
+  render();
+  const use = window.claude && window.claude.use;
+  if (use) {
+    const d = await window.claude.use('db');
+    if (d) {
+      db = d; backend = 'db';
+      userApi = await window.claude.use('user');
+      if (userApi) {
+        try { const owner = await userApi.isOwner(); me = await userApi.id(); role = owner ? 'owner' : 'staff'; } catch (e) { role = 'owner'; }
+      } else role = 'owner';
+      window.claude.use('downloads').then(x => { downloads = x; render(); });
+      db.doc('settings/main').onSnapshot(snap => { const d2 = snap.exists ? snap.data() : null; S.settings = d2 ? { ...DEFAULT_SETTINGS, ...d2, templates: d2.templates || DEFAULT_SETTINGS.templates, required: d2.required || DEFAULT_SETTINGS.required } : null; render(); }, err => console.error(err));
+      db.collection('staff').onSnapshot(qs => { const next = {}; qs.docs.forEach(x => { next[x.id] = { id: x.id, ...x.data() }; }); S.staff = next; render(); resolveNames(); }, err => console.error(err));
+      if (role === 'owner') {
+        db.collection('payroll').onSnapshot(qs => { const next = {}; let comp = null; qs.docs.forEach(x => { if (x.id === '_company') comp = x.data(); else if (!x.id.startsWith('_')) next[x.id] = x.data(); }); S.payroll = next; S.company = comp; render(); }, err => console.error(err));
+        db.collection('requests').onSnapshot(qs => { const next = {}; qs.docs.forEach(x => { next[x.id] = x.data(); }); S.requests = next; render(); resolveNames(); }, err => console.error(err));
+      } else if (me) {
+        db.doc('requests/' + me).onSnapshot(snap => { S.myReq = snap.exists ? snap.data() : null; render(); }, err => console.error(err));
+      }
+      ensureShiftSub(); updateUndo(); return;
+    }
+    window.claude.use('downloads').then(x => { downloads = x; render(); });
+  }
+  loadLocal(); S.ready = true; render(); updateUndo();
+}
+if (location.protocol === 'file:') window.__sb = { toBankKana, zenginFile, calcPay, payPeriod, S, company, setPayYm: v => { payYm = v; }, render: () => render(), setView: v => { view = v; render(); } };
+const hot = window.claude?.hot;
+if (hot?.ready) hot.ready(boot); else boot(hot?.data ?? {});
+})();
+</script>
+</body>
+</html>
